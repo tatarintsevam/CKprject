@@ -474,9 +474,6 @@ namespace WinFormsApp6
 
             double NominalFreq = voltageAnalyzer.GetNominalFrequency();
 
-
-
-
             double[] avgAarray = voltageAnalyzer.PhaseAFreq.ToArray();
 
 
@@ -488,12 +485,18 @@ namespace WinFormsApp6
             double FreqValuesPerSecond = (double)samplingRate / stepSizePoints;
 
 
-            int ValuesIn10sec = (int)(samplingRate * 10);
+            int ValuesIn10sec = (int)(FreqValuesPerSecond * 10);
 
 
             int numberOf10SecIntervals = avgAarray.Length / ValuesIn10sec;
             double[] avgAIn10sec = new double[numberOf10SecIntervals];
 
+            if (numberOf10SecIntervals == 0)
+            {
+                MessageBox.Show("Нет данных для анализа!", "Ошибка",
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
 
             for (int i = 0; i < numberOf10SecIntervals; i++)
             {

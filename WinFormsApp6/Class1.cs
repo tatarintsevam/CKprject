@@ -245,7 +245,21 @@ namespace VoltageAnalyzer
         private Complex[] PerformFFT(double[] data)//метод в котором реализовано БПФ, статический потому что не будет объекта класса
         {
             int N = data.Length;
-            Complex[] result2 = new Complex[N];
+            int nextPowerOfTwo = 1;
+            while (nextPowerOfTwo < N)
+            {
+                nextPowerOfTwo <<= 1; // Умножаем на 2 до тех пор, пока не получим степень двойки
+            }
+
+            // Если нужно дополнение, создаем новый массив
+            if (nextPowerOfTwo != N)
+            {
+                double[] addedData = new double[nextPowerOfTwo];
+                Array.Copy(data, addedData, N); // Копируем исходные данные
+                                                // Остальные элементы автоматически заполнены 0
+                data = addedData;
+                N = nextPowerOfTwo;
+            }
             if (N == 1)//выход из рекурсии
                 return new Complex[] { data[0] };
             double[] odd = new double[N / 2];//создание массива четного и нечетного X(m)
@@ -271,6 +285,7 @@ namespace VoltageAnalyzer
                 result[i] = BPFeven[i] + WFFT;
                 result[i + N / 2] = BPFeven[i] - WFFT;
             }
+
             return result;
         }
 
