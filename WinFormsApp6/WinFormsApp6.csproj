@@ -10,7 +10,8 @@
 
 	<ItemGroup>
 		<PackageReference Include="ComtradeHandler" Version="1.0.3" />
-		<PackageReference Include="ScottPlot.WinForms" Version="5.1.57" />
+		<PackageReference Include="MathNet.Numerics" Version="5.0.0" />
+		<PackageReference Include="ScottPlot.WinForms" Version="5.1.58" />
 		<PackageReference Include="Wisp.Comtrade" Version="1.0.0" />
 	</ItemGroup>
 

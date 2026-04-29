@@ -1,36 +1,32 @@
-﻿using ScottPlot;
-using ScottPlot.Plottables;
-using System;
-using System.Collections.Generic;
-using System.Configuration;
+﻿using MathNet.Numerics;
+using MathNet.Numerics.IntegralTransforms;
 using System.Diagnostics;
-using System.Linq;
 using System.Numerics;
-using System.Text;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 using WinFormsApp6;
 using Wisp.Comtrade;
 using Wisp.Comtrade.Models;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace VoltageAnalyzer
 {
 
     public class ThreePhaseVoltageAnalyzer
     {
+
+
+
         public double[] PhaseAFIR;
         private List<PhaseVoltageCandidate> _phaseVoltageCandidates;
 
-        private const double TWO_PI = 2 * Math.PI;
-        public double[] PhaseAU;
+        protected const double TWO_PI = 2 * Math.PI;
+        protected double[] PhaseAU;
 
-        private Wisp.Comtrade.RecordReader _comtradeData;
-        private ConfigurationHandler configuration;
+        protected Wisp.Comtrade.RecordReader _comtradeData;
+        protected ConfigurationHandler configuration;
 
-        private int _phaseAIndex;
-        private int _phaseBIndex;
-        private int _phaseCIndex;
-        private double _nominalFrequency;
+        protected int _phaseAIndex;
+        protected double _nominalFrequency;
         public double GetNominalFrequency() => configuration.Frequency;
         public string GetStationName() => configuration.StationName;    
         public double GetSamplingRate() => (int)configuration.SampleRates[0].SamplingFrequency;
@@ -43,8 +39,8 @@ namespace VoltageAnalyzer
         public List<double> PhaseC { get; private set; }
 
 
-        private int _windowSizePeriods;
-        private int _stepSizePeriods;
+        protected int _windowSizePeriods;
+        protected int _stepSizePeriods;
 
         public List<DateTime> TimeStampsFreq { get; private set; }
         public List<double> PhaseAFreq { get; private set; }
@@ -92,15 +88,15 @@ namespace VoltageAnalyzer
 
             CalculateAll();
         }
-      
-        private void ClearResults()
+
+        protected void ClearResults()
         {
             TimeStampsOsc.Clear();
 
             PhaseA.Clear();
           
         }
-        private void InitializeResultLists()
+        protected void InitializeResultLists()
         {
             TimeStampsFreq = new List<DateTime>();
             PhaseAFreq = new List<double>();
@@ -116,7 +112,7 @@ namespace VoltageAnalyzer
             PhaseAHarmonicsPhases = new List<List<double>>();
           
         }
-        private void CalculateAll()
+        protected void CalculateAll()
         {
             CalculateFrequencies();
 
@@ -126,9 +122,9 @@ namespace VoltageAnalyzer
 
 
         }
-        
-        
-        private void CalculateRmsValues()
+
+
+        protected void CalculateRmsValues()
         {
             // Инициализация списков для RMS значений
             TimeStampsRms = new List<DateTime>();
@@ -143,7 +139,7 @@ namespace VoltageAnalyzer
             int windowSizePoints = (int)(samplingRate * _windowSizePeriods / _nominalFrequency);
             int stepSizePoints = (int)(samplingRate * _stepSizePeriods / _nominalFrequency);
             
-            double[] phaseAWindow1 = PhaseAU.ToArray();
+            double[] phaseAWindow1 = PhaseA.ToArray();
             // Расчет для каждого окна
             for (int startPoint = 0; startPoint <= PhaseA.Count - windowSizePoints; startPoint += stepSizePoints)
             {
@@ -168,45 +164,48 @@ namespace VoltageAnalyzer
 
 
         }
-        private (List<double> amplitudes, List<double> phases) CalculateHarmonicsForWindow(double[] data,
+        protected (List<double> amplitudes, List<double> phases) CalculateHarmonicsForWindow(double[] data,
     int samplingRate)
         {
             Complex[] dft = PerformFFT(data);
+            //var dft = data.Select(x => new Complex(x, 0)).ToArray(); Fourier.Forward(dft, FourierOptions.Default);
             List<double> amplitudes = new List<double>();
             List<double> phases = new List<double>();
-            // Рассчитываем до 50-й гармоники (можно адаптировать)
+            // Рассчитываем до 50-й гармоники
             int maxHarmonic = (int)(samplingRate / (2 * _nominalFrequency));
             for (int i = 1; i <= maxHarmonic; i++)
             {
                 int index = (int)(i * _nominalFrequency * data.Length / samplingRate);
                 if (index >= dft.Length) break;
 
-                amplitudes.Add(Math.Sqrt(dft[index].Real * dft[index].Real +
-                    dft[index].Imaginary * dft[index].Imaginary) * 2 / data.Length);
+                amplitudes.Add((Math.Sqrt(dft[index].Real * dft[index].Real +
+                    dft[index].Imaginary * dft[index].Imaginary) * 2 / dft.Length));
                 phases.Add(Math.Atan2(dft[index].Imaginary, dft[index].Real));
             }
 
             return (amplitudes, phases);
         }
-        private void CalculateHarmonics()
+        protected void CalculateHarmonics()
         {
             TimeStampsHarmonics.Clear();
             PhaseAHarmonicsAmplitudes.Clear();
-    
+
             PhaseAHarmonicsPhases.Clear();
-   
+
 
             int samplingRate = (int)configuration.SampleRates[0].SamplingFrequency;
             int windowSizePoints = (int)(samplingRate * _windowSizePeriods / _nominalFrequency);
             int stepSizePoints = (int)(samplingRate * _stepSizePeriods / _nominalFrequency);
-            double[] phaseAWindow1 = PhaseAU.ToArray();
+            double[] phaseAWindow1 = PhaseA.ToArray();
+
+
             for (int startPoint = 0; startPoint <= PhaseA.Count - windowSizePoints; startPoint += stepSizePoints)
             {
                 var phaseAWindow = GetDataWindow(phaseAWindow1, startPoint, windowSizePoints);
-               
 
-                var (amplitudesA, phaseAU) = CalculateHarmonicsForWindow(phaseAWindow, samplingRate);
-              
+
+                var (amplitudesA, phaseA) = CalculateHarmonicsForWindow(phaseAWindow, samplingRate);
+
 
                 int middlePoint = startPoint + windowSizePoints / 2;
                 DateTime timeStamp = _comtradeData.Configuration.StartTime.AddSeconds(
@@ -214,52 +213,29 @@ namespace VoltageAnalyzer
 
                 TimeStampsHarmonics.Add(timeStamp);
                 PhaseAHarmonicsAmplitudes.Add(amplitudesA);
-               
-                PhaseAHarmonicsPhases.Add(phaseAU);
-            
+
+                PhaseAHarmonicsPhases.Add(phaseA);
+
             }
 
 
         }
-        private Complex[] PerformDFT(double[] data)
+        protected bool IsPowerOfTwo(int x)
         {
-            int N = data.Length;
-            Complex[] result = new Complex[N];
-            for (int k = 0; k < N; k++)
-            {
-                for (int n = 0; n < N; n++)
-                {
-                    double angle = -2 * Math.PI * k * n / N;
-                    result[k] += data[n] * new Complex(Math.Cos(angle), Math.Sin(angle));
-                }
-            }
-            return result;
+            return x > 0 && (x & (x - 1)) == 0;
         }
-        public double CalculateRmsValue(double[] data)
+
+        protected double CalculateRmsValue(double[] data)
         {
             // Квадратный корень из среднего квадрата значений
             double sumOfSquares = data.Sum(x => x * x);
             double rmsValue = Math.Sqrt(sumOfSquares / data.Length);
             return rmsValue;
         }
-        private Complex[] PerformFFT(double[] data)//метод в котором реализовано БПФ, статический потому что не будет объекта класса
+        protected Complex[] CalculateFFT(double[] data)//выполняет FFT преобразование
         {
             int N = data.Length;
-            int nextPowerOfTwo = 1;
-            while (nextPowerOfTwo < N)
-            {
-                nextPowerOfTwo <<= 1; // Умножаем на 2 до тех пор, пока не получим степень двойки
-            }
 
-            // Если нужно дополнение, создаем новый массив
-            if (nextPowerOfTwo != N)
-            {
-                double[] addedData = new double[nextPowerOfTwo];
-                Array.Copy(data, addedData, N); // Копируем исходные данные
-                                                // Остальные элементы автоматически заполнены 0
-                data = addedData;
-                N = nextPowerOfTwo;
-            }
             if (N == 1)//выход из рекурсии
                 return new Complex[] { data[0] };
             double[] odd = new double[N / 2];//создание массива четного и нечетного X(m)
@@ -270,8 +246,8 @@ namespace VoltageAnalyzer
                 even[i] = data[2 * i];
 
             }
-            Complex[] BPFodd = PerformFFT(odd);//шаг рекурсии
-            Complex[] BPFeven = PerformFFT(even);
+            Complex[] BPFodd = CalculateFFT(odd);//шаг рекурсии
+            Complex[] BPFeven = CalculateFFT(even);
 
             Complex[] result = new Complex[N];//создание массива результатов
 
@@ -288,21 +264,76 @@ namespace VoltageAnalyzer
 
             return result;
         }
-
-
-        private void CalculateFrequencies()
+        protected Complex[] PerformFFT(double[] data1)//Преобразует исходный массив, меняет его размер
         {
+
+            int nextPowerOfTwo1 = 1;
+            while (nextPowerOfTwo1 < data1.Length)
+            {
+                nextPowerOfTwo1 <<= 1; // Умножаем на 2 до тех пор, пока не получим степень двойки
+            }
+            Complex[] result = new Complex[nextPowerOfTwo1];//создание массива результатов
+            if (!IsPowerOfTwo(data1.Length))
+            {
+                double[] data = new double[nextPowerOfTwo1];
+                double[] originalArguments = new double[data1.Length];
+                for (int i = 0; i < data1.Length; i++)
+                {
+                    originalArguments[i] = i;
+                }
+
+                double[] newArguments = new double[nextPowerOfTwo1];
+                for (int i = 0; i < nextPowerOfTwo1; i++)
+                {
+                    newArguments[i] = i * (double)(data1.Length - 1) / (nextPowerOfTwo1 - 1);
+                }
+
+                for (int i = 0; i < nextPowerOfTwo1; i++)
+                {
+                    data[i] = Perform_interpolation(data1, (int)Math.Round(newArguments[i]), originalArguments);
+                }
+                result = CalculateFFT(data);
+            }
+            else
+            {
+                result = CalculateFFT(data1);
+            }
+
+
+            return result;
+
+        }
+
+        protected Complex[] PerformDFT(double[] data)
+        {
+            int N = data.Length;
+            Complex[] result = new Complex[N];
+            for (int k = 0; k < N; k++)
+            {
+                for (int n = 0; n < N; n++)
+                {
+                    double angle = -2 * Math.PI * k * n / N;
+                    result[k] += data[n] * new Complex(Math.Cos(angle), Math.Sin(angle));
+                }
+            }
+            return result;
+        }
+        protected void CalculateFrequencies()//вычисление частот на промежутках в 10 периодов
+        {
+            
+           
             PhaseAFreq.Clear();
       
             int samplingRate = (int)configuration.SampleRates[0].SamplingFrequency;
            
             int windowSizePoints = (int)(samplingRate * _windowSizePeriods / _nominalFrequency);
        
-            int stepSizePoints = (int)(samplingRate * _stepSizePeriods / _nominalFrequency);
-           
+            int stepSizePoints = (int)(samplingRate * _stepSizePeriods/ _nominalFrequency);
+
             //double[] PhaseA1 = PhaseA.ToArray();
             double[] PhaseA1 = PhaseAFIR;
-            for (int startPoint = 0; startPoint <= PhaseA.Count - windowSizePoints; startPoint += stepSizePoints)
+
+            for (int startPoint = 0; startPoint <= PhaseA1.Length - windowSizePoints; startPoint += stepSizePoints)
             {
                 // Получение данных для текущего окна
                 double[] phaseAWindow = GetDataWindow(PhaseA1, startPoint, windowSizePoints);
@@ -319,12 +350,104 @@ namespace VoltageAnalyzer
                 TimeStampsFreq.Add(timeStamp);
 
                 // Сохранение результатов
-                PhaseAFreq.Add(frequencyA);
+                PhaseAFreq.Add(frequencyA);//массив на выходе 6600000/2000=3300 точек
                
             }
 
+
         }
-        private double CalculateFrequencyByZeroCrossings2(double[] data, int samplingRate)
+        protected double Perform_interpolation(double[] data, int ReqNumOfPoints, double[] arguments)
+        {
+            double x = ReqNumOfPoints;
+            int n = data.Length;
+
+
+            int idx = Array.BinarySearch(arguments, x);
+            if (idx < 0) idx = ~idx - 1;
+            if (idx < 0) idx = 0;
+            if (idx >= n - 1) idx = n - 2;
+
+            double x0 = arguments[idx];
+            double x1 = arguments[idx + 1];
+            double y0 = data[idx];
+            double y1 = data[idx + 1];
+
+
+            static double[] GetSecondDerivatives(double[] y, double[] x)
+            {
+                int N = y.Length;
+                double[] h = new double[N - 1];
+                for (int i = 0; i < N - 1; i++)
+                    h[i] = x[i + 1] - x[i];
+
+                double[] a = new double[N];
+                double[] b = new double[N];
+                double[] c = new double[N];
+                double[] d = new double[N];
+
+                for (int i = 1; i < N - 1; i++)
+                {
+                    a[i] = h[i - 1];
+                    b[i] = 2 * (h[i - 1] + h[i]);
+                    c[i] = h[i];
+                    d[i] = 6 * ((y[i + 1] - y[i]) / h[i] - (y[i] - y[i - 1]) / h[i - 1]);
+                }
+
+
+                b[0] = 1;
+                c[0] = 0;
+                d[0] = 0;
+                a[N - 1] = 0;
+                b[N - 1] = 1;
+                d[N - 1] = 0;
+
+
+                double[] m = new double[N];
+                double[] alpha = new double[N];
+                double[] beta = new double[N];
+                alpha[0] = -c[0] / b[0];
+                beta[0] = d[0] / b[0];
+                for (int i = 1; i < N; i++)
+                {
+                    double denom = b[i] + a[i] * alpha[i - 1];
+                    alpha[i] = -c[i] / denom;
+                    beta[i] = (d[i] - a[i] * beta[i - 1]) / denom;
+                }
+                m[N - 1] = beta[N - 1];
+                for (int i = N - 2; i >= 0; i--)
+                    m[i] = alpha[i] * m[i + 1] + beta[i];
+
+                return m;
+            }
+
+
+            double[] secondDerivatives;
+            if (!_cache.ContainsKey(arguments))
+            {
+                secondDerivatives = GetSecondDerivatives(data, arguments);
+                _cache[arguments] = secondDerivatives;
+            }
+            else
+            {
+                secondDerivatives = (double[])_cache[arguments];
+            }
+
+            double m0 = secondDerivatives[idx];
+            double m1 = secondDerivatives[idx + 1];
+            double h = x1 - x0;
+
+
+            double t = (x - x0) / h;
+            double a00 = 2 * t * t * t - 3 * t * t + 1;
+            double a10 = t * t * t - 2 * t * t + t;
+            double a01 = -2 * t * t * t + 3 * t * t;
+            double a11 = t * t * t - t * t;
+
+            return a00 * y0 + a10 * h * m0 + a01 * y1 + a11 * h * m1;
+        }
+
+        protected static Dictionary<object, object> _cache = new Dictionary<object, object>();
+        protected double CalculateFrequencyByZeroCrossings2(double[] data, int samplingRate)
         {
             
             int minPoints = 3;
@@ -384,7 +507,7 @@ namespace VoltageAnalyzer
 
             return frequency;
         }
-        private double[] GetDataWindow(double[] data, int startIndex, int length)
+        protected double[] GetDataWindow(double[] data, int startIndex, int length)
         {
             double[] window = new double[length];
             Array.Copy(data, startIndex, window, 0, length);
@@ -395,8 +518,8 @@ namespace VoltageAnalyzer
         {
             return $"A (idx:{_phaseAIndex + 1}))";
         }
-       
-        private void FindPhaseVoltageIndices()
+
+        protected void FindPhaseVoltageIndices()
         {
           
             List<PhaseVoltageCandidate> phaseVoltageCandidates = new List<PhaseVoltageCandidate>();
@@ -473,7 +596,7 @@ namespace VoltageAnalyzer
             var phaseA = phaseVoltageCandidates.FirstOrDefault(c => c.PhaseType == PhaseType.PhaseA);
            
 
-            if (phaseA != null /*&& phaseB != null && phaseC != null*/)
+            if (phaseA != null )
             {
                 _phaseAIndex = phaseA.ChannelIndex;
                
@@ -484,12 +607,13 @@ namespace VoltageAnalyzer
             }
 
         }
-       
-        public void ReadAllVoltages()
+
+        protected void ReadAllVoltages()
         {
+
             PhaseA = _comtradeData.GetAnalogPrimaryChannel(_phaseAIndex).ToList();
             PhaseAFIR = CalculatePhaseAFIR(PhaseA.ToArray());
-            PhaseAU = CalculatePhaseAFIR(PhaseA.ToArray());
+            PhaseAU =CalculatePhaseAFIR(PhaseA.ToArray());
             double samplingRate = configuration.SampleRates[0].SamplingFrequency;
             for (int i = 0; i < PhaseA.Count; i++)
             {
@@ -499,7 +623,7 @@ namespace VoltageAnalyzer
               
             }
         }
-        private double[] CalculatePhaseAFIR( double[] _PhaseAToFIR)
+        protected double[] CalculatePhaseAFIR(double[] _PhaseAToFIR)
         {
             int dataPoints = _PhaseAToFIR.Length;
             double[] phaseA = new double[dataPoints];
@@ -507,15 +631,13 @@ namespace VoltageAnalyzer
 
             for (int i = 0; i < dataPoints; i++)
             {
-               
+
                 phaseA1[i] = _PhaseAToFIR[i];
 
             }
 
             for (int i = 0; i < dataPoints; i++)
             {
-
-
                 //phaseA[i] = voltageAnalyzer.PhaseAFreq[i];
                 phaseA[i] = FIRfltr(phaseA1, 20, i);
 
@@ -523,7 +645,7 @@ namespace VoltageAnalyzer
             return phaseA;
 
         }
-        private double FIRfltr(double[] phaseA1, int windowsize, int i)
+        protected double FIRfltr(double[] phaseA1, int windowsize, int i)
         //Метод реализующий фильтр FIR
         {
             double phaseA2 = 0;
@@ -551,7 +673,7 @@ namespace VoltageAnalyzer
             return result;
         }
 
-        private void InitializeOscLists()
+        protected void InitializeOscLists()
         {
             TimeStampsOsc = new List<DateTime>();
 

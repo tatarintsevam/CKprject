@@ -20,9 +20,11 @@ namespace WinFormsApp6
 
     public partial class Form1 : Form
     {
+        
         private ConfigurationHandler configuration;
 
         private ThreePhaseVoltageAnalyzer voltageAnalyzer;
+        private ThreePhaseVoltageAnalyzer voltageAnalyzerFreq;
         public Form1()
         {
             InitializeComponent();
@@ -56,7 +58,7 @@ namespace WinFormsApp6
         }
         private void LoadComtradeFile(string filePath)
         {
-
+            
 
             InfoToolStripStatusLabel.Text = $"Loading file: {Path.GetFileName(filePath)}";
 
@@ -65,10 +67,10 @@ namespace WinFormsApp6
 
             try
             {
-
-
-                voltageAnalyzer = new ThreePhaseVoltageAnalyzer(filePath, 10, 1);
-                this.Text = $"Oscilloscope: {Path.GetFileName(filePath)}";
+    
+                voltageAnalyzer = new ThreePhaseVoltageAnalyzer(filePath, 10, 10);//дл€ FFT
+                voltageAnalyzerFreq = new ThreePhaseVoltageAnalyzer(filePath, 500, 500);//дл€ freq
+                Text = $"Oscilloscope: {Path.GetFileName(filePath)}";
 
 
                 string phaseInfo = voltageAnalyzer.GetPhaseIndicesInfo();
@@ -133,34 +135,6 @@ namespace WinFormsApp6
 
             harmPlot.Refresh();
         }
-
-        private double FIR_filter(double[] phaseA1, int windowsize, int i)
-        //ћетод реализующий фильтр FIR
-        {
-            double phaseA2 = 0;
-            double result;
-            if (i < windowsize)
-            {
-                for (int k = 0; k <= i; k++)
-                {
-                    phaseA2 = phaseA2 + phaseA1[i - k];
-
-                }
-                result = phaseA2 / (i + 1);
-            }
-            else
-            {
-                for (int k = 0; k < windowsize; k++)
-                {
-                    phaseA2 = phaseA2 + phaseA1[i - k];
-
-                }
-                result = phaseA2 / windowsize;
-            }
-
-
-            return result;
-        }
         private void PlotVoltageData()
         {
             if (voltageAnalyzer == null)
@@ -182,7 +156,7 @@ namespace WinFormsApp6
             for (int i = 0; i < dataPoints; i++)
             {
                 timeSeconds[i] = (voltageAnalyzer.TimeStampsOsc[i] - startTime).TotalSeconds;
-                phaseA[i] = voltageAnalyzer.PhaseAU[i];
+                phaseA[i] = voltageAnalyzer.PhaseA[i];
 
 
             }
@@ -230,26 +204,25 @@ namespace WinFormsApp6
         }
         private void PlotFreqData()
         {
-            if (voltageAnalyzer == null)
+            if (voltageAnalyzerFreq == null)
                 return;
 
 
 
             FreqPlot.Plot.Clear();
 
-            int dataPoints = this.voltageAnalyzer.PhaseAFreq.Count;
+            int dataPoints = voltageAnalyzerFreq.PhaseAFreq.Count;
 
 
             double[] timeSeconds = new double[dataPoints];
-            DateTime startTime = voltageAnalyzer.TimeStampsFreq[0];
+            DateTime startTime = voltageAnalyzerFreq.TimeStampsFreq[0];
 
 
             double[] phaseA = new double[dataPoints];
-            double[] phaseA1 = new double[dataPoints];
             for (int i = 0; i < dataPoints; i++)
             {
-                timeSeconds[i] = (voltageAnalyzer.TimeStampsFreq[i] - startTime).TotalSeconds;
-                phaseA[i] = voltageAnalyzer.PhaseAFreq[i];
+                timeSeconds[i] = (voltageAnalyzerFreq.TimeStampsFreq[i] - startTime).TotalSeconds;
+                phaseA[i] = voltageAnalyzerFreq.PhaseAFreq[i];
 
 
             }
@@ -267,44 +240,22 @@ namespace WinFormsApp6
 
             FreqPlot.Refresh();
         }
-        private void PlotU_Diff()
+        private void Plot_Voltage_Difference()
         {
 
-
-
             double nominalU = 6000;
-            double[] avgAarray = voltageAnalyzer.PhaseARms.ToArray();
-            double avgA = Math.Sqrt(avgAarray.Average(x => x * x));
-
-            int samplingRate = (int)voltageAnalyzer.GetSamplingRate();
-            int windowSizePoints = (int)(samplingRate * 10 / 50);
-            int stepSizePoints = (int)(samplingRate / 50);
-
-
-            double rmsValuesPerSecond = (double)samplingRate / stepSizePoints;
+            double[] avgAarray = voltageAnalyzer.PhaseARms.ToArray();//3300 значений
 
             double[] timeSeconds = new double[avgAarray.Length];
             double[] phaseA = new double[avgAarray.Length];
 
-            int rmsValuesIn3s = (int)(rmsValuesPerSecond * 600);//10 минут или 3 с
-            int numberOf3secIntervals = avgAarray.Length / rmsValuesIn3s;
-            double[] avgA3sec = new double[numberOf3secIntervals];
-
-            for (int i = 0; i < numberOf3secIntervals; i++)
+            for (int i = 0; i < avgAarray.Length; i++)
             {
-                double[] windowNSeconds = new double[rmsValuesIn3s];
-                Array.Copy(avgAarray, i * (rmsValuesIn3s), windowNSeconds, 0, rmsValuesIn3s);
-                avgA3sec[i] = Math.Sqrt(windowNSeconds.Average(x => x * x));
-                for (int j = i * rmsValuesIn3s; j < rmsValuesIn3s * (i + 1); j++)
-                {
-                    phaseA[j] = (avgA3sec[i] - nominalU) * 100 / nominalU;
-                    timeSeconds[j] = (voltageAnalyzer.TimeStampsRms[j] - voltageAnalyzer.TimeStampsRms[0]).TotalSeconds;
-                }
-
+                phaseA[i] = (avgAarray[i] - nominalU) * 100 / nominalU;
+                timeSeconds[i] = (voltageAnalyzer.TimeStampsRms[i] - voltageAnalyzer.TimeStampsRms[0]).TotalSeconds;
             }
-            Array.Resize(ref timeSeconds, numberOf3secIntervals * rmsValuesIn3s);
-            Array.Resize(ref phaseA, numberOf3secIntervals * rmsValuesIn3s);
-           
+        
+
             var phA = PlotUotkl.Plot.Add.SignalXY(timeSeconds, phaseA);
             phA.LegendText = "deltaUa";
            
@@ -319,54 +270,29 @@ namespace WinFormsApp6
 
 
         }
-        private void Plot_f_Diff()
+        private void Plot_frequency_Difference()
         {
-
-            double NominalFreq = voltageAnalyzer.GetNominalFrequency();
-            double[] avgAarray = voltageAnalyzer.PhaseAFreq.ToArray();
-
+            double NominalFreq = voltageAnalyzerFreq.GetNominalFrequency();
+            int dataPoints = voltageAnalyzerFreq.PhaseAFreq.Count;
 
 
-            int samplingRate = (int)voltageAnalyzer.GetSamplingRate();
-            int windowSizePoints = (int)(samplingRate * 10 / 50);
-            int stepSizePoints = (int)(samplingRate / 50);
+            double[] timeSeconds = new double[dataPoints];
+            DateTime startTime = voltageAnalyzerFreq.TimeStampsFreq[0];
 
 
-            double FreqValuesPerSecond = (double)samplingRate / stepSizePoints;
-
-
-            int ValuesIn10sec = (int)(samplingRate * 10 / stepSizePoints);
-
-
-            int numberOf10SecIntervals = avgAarray.Length / ValuesIn10sec;
-            double[] avgAIn10sec = new double[numberOf10SecIntervals];
-
-
-
-            int totalPoints = numberOf10SecIntervals * ValuesIn10sec;
-            double[] timeSeconds = new double[totalPoints]; 
-            double[] phaseAFreqDiff = new double[totalPoints];
-
-            for (int i = 0; i < numberOf10SecIntervals; i++)
+            double[] phaseA = new double[dataPoints];
+            for (int i = 0; i < dataPoints; i++)
             {
+                timeSeconds[i] = (voltageAnalyzerFreq.TimeStampsFreq[i] - startTime).TotalSeconds;
+                phaseA[i] = voltageAnalyzerFreq.PhaseAFreq[i]- NominalFreq;
 
-                double[] windowNSeconds = new double[ValuesIn10sec];
-                Array.Copy(avgAarray, i * (ValuesIn10sec), windowNSeconds, 0, ValuesIn10sec);
-                avgAIn10sec[i] = windowNSeconds.Average();
-               
-                    for (int j = i * windowNSeconds.Length; j < windowNSeconds.Length * (i + 1); j++)
-                    {
-                        phaseAFreqDiff[j] = (avgAIn10sec[i] - 50);
-                        timeSeconds[j] = (voltageAnalyzer.TimeStampsFreq[j] - voltageAnalyzer.TimeStampsFreq[0]).TotalSeconds;
-                    }
-                
 
             }
-            var phA = Plotfotkl.Plot.Add.SignalXY(timeSeconds, phaseAFreqDiff);
-            phA.LegendText = "delta_fa";
 
-            Array.Resize(ref timeSeconds, numberOf10SecIntervals * ValuesIn10sec);
-            Array.Resize(ref phaseAFreqDiff, numberOf10SecIntervals * ValuesIn10sec);
+            var phA = Plotfotkl.Plot.Add.SignalXY(timeSeconds, phaseA);
+            phA.LegendText = "Ua";
+
+
 
             Plotfotkl.Plot.Axes.AutoScale();
 
@@ -380,18 +306,14 @@ namespace WinFormsApp6
             if (voltageAnalyzer == null)
                 return;
 
+            RMS_Plot.Plot.Clear();
 
-
-            DeistvPlot.Plot.Clear();
-
-            int dataPoints = this.voltageAnalyzer.PhaseARms.Count;
-
+            int dataPoints = voltageAnalyzer.PhaseARms.Count;
 
             double[] timeSeconds = new double[dataPoints];
 
-
-
             double[] phaseA = new double[dataPoints];
+
             for (int i = 0; i < dataPoints; i++)
             {
                 timeSeconds[i] = (voltageAnalyzer.TimeStampsRms[i] - voltageAnalyzer.TimeStampsRms[0]).TotalSeconds;
@@ -400,17 +322,17 @@ namespace WinFormsApp6
 
             }
 
-            var phA = DeistvPlot.Plot.Add.SignalXY(timeSeconds, phaseA);
+            var phA = RMS_Plot.Plot.Add.SignalXY(timeSeconds, phaseA);
             phA.LegendText = "Ua";
 
 
 
-            DeistvPlot.Plot.Axes.AutoScale();
+            RMS_Plot.Plot.Axes.AutoScale();
 
-            DeistvPlot.Plot.ShowLegend(Edge.Right);
+            RMS_Plot.Plot.ShowLegend(Edge.Right);
 
 
-            DeistvPlot.Refresh();
+            RMS_Plot.Refresh();
         }
 
 
@@ -471,38 +393,33 @@ namespace WinFormsApp6
         {
             int CountDiff_dfp = 0;
             int CountDiff_dfn = 0;
+           
 
             double NominalFreq = voltageAnalyzer.GetNominalFrequency();
+         
 
             double[] avgAarray = voltageAnalyzer.PhaseAFreq.ToArray();
 
-
             int samplingRate = (int)voltageAnalyzer.GetSamplingRate();
             int windowSizePoints = (int)(samplingRate * 10 / 50);
-            int stepSizePoints = (int)(samplingRate * 5 / 50);
-
-
+            int stepSizePoints = (int)(samplingRate * 10 / 50);
+            int estimatesPer10sec = (int)(10.0 / (10.0 / NominalFreq));
             double FreqValuesPerSecond = (double)samplingRate / stepSizePoints;
 
 
-            int ValuesIn10sec = (int)(FreqValuesPerSecond * 10);
+            long PeriodsIn10sec = (int)(estimatesPer10sec);
 
 
-            int numberOf10SecIntervals = avgAarray.Length / ValuesIn10sec;
+            long numberOf10SecIntervals = voltageAnalyzer.PhaseAFIR.Length / (10 * samplingRate);
+
             double[] avgAIn10sec = new double[numberOf10SecIntervals];
 
-            if (numberOf10SecIntervals == 0)
-            {
-                MessageBox.Show("Ќет данных дл€ анализа!", "ќшибка",
-                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
-            }
 
             for (int i = 0; i < numberOf10SecIntervals; i++)
             {
 
-                double[] windowNSeconds = new double[ValuesIn10sec];
-                Array.Copy(avgAarray, i * (ValuesIn10sec), windowNSeconds, 0, ValuesIn10sec);
+                double[] windowNSeconds = new double[PeriodsIn10sec ];
+                Array.Copy(avgAarray, i * (PeriodsIn10sec ), windowNSeconds, 0, PeriodsIn10sec);
                 avgAIn10sec[i] = windowNSeconds.Average();
 
                 if (avgAIn10sec[i] - 50 > 0.2)
@@ -525,25 +442,20 @@ namespace WinFormsApp6
 
         private void действующие«начени€ToolStripMenuItem_Click(object sender, EventArgs e)
         {
+            int samplingRate = (int)voltageAnalyzer.GetSamplingRate();
             int CountDiff_Up = 0;
             int CountDiff_Un = 0;
             double nominalU = 6000;
             double[] avgAarray = voltageAnalyzer.PhaseARms.ToArray();
-            double avgA = Math.Sqrt(avgAarray.Average(x => x * x));
-
-            int samplingRate = (int)voltageAnalyzer.GetSamplingRate();
-            int windowSizePoints = (int)(samplingRate * 10 / 50);
-            int stepSizePoints = (int)(samplingRate / 50);
-
-
-            double rmsValuesPerSecond = (double)samplingRate / stepSizePoints;
-
-
-            int rmsValuesIn10min = (int)(rmsValuesPerSecond * 600);
-            int numberOf10minIntervals = avgAarray.Length / rmsValuesIn10min;
+            int rmsValuesIn10min = (int)(5 * voltageAnalyzer.PhaseA.Count/ (samplingRate));
+            Debug.WriteLine(voltageAnalyzer.PhaseARms.Count + " voltageAnalyzer.PhaseARms.Count ?=6.600.000");
+            Debug.WriteLine(rmsValuesIn10min + " rmsValuesIn10min - 660*5??");
+            int numberOf10minIntervals = (int)voltageAnalyzer.PhaseA.Count / (600*samplingRate);
             double[] avgA10min = new double[numberOf10minIntervals];
+            Debug.WriteLine(numberOf10minIntervals + " numberOf10minIntervals - 1??");
             for (int i = 0; i < numberOf10minIntervals; i++)
             {
+                Debug.WriteLine(1);
                 double[] windowNSeconds = new double[rmsValuesIn10min];
                 Array.Copy(avgAarray, i * (rmsValuesIn10min), windowNSeconds, 0, rmsValuesIn10min);
                 avgA10min[i] = Math.Sqrt(windowNSeconds.Average(x => x * x));
@@ -573,13 +485,13 @@ namespace WinFormsApp6
 
         private void показать√рафикToolStripMenuItem1_Click(object sender, EventArgs e)
         {
-            PlotU_Diff();
+            Plot_Voltage_Difference();
 
         }
 
         private void показать√рафикToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            Plot_f_Diff();
+            Plot_frequency_Difference();
         }
     }
 }

@@ -25,7 +25,7 @@
         private void InitializeComponent()
         {
             tabPage4 = new TabPage();
-            DeistvPlot = new ScottPlot.WinForms.FormsPlot();
+            RMS_Plot = new ScottPlot.WinForms.FormsPlot();
             menuStrip4 = new MenuStrip();
             действующиеЗначенияToolStripMenuItem = new ToolStripMenuItem();
             tabPage3 = new TabPage();
@@ -68,7 +68,7 @@
             // 
             // tabPage4
             // 
-            tabPage4.Controls.Add(DeistvPlot);
+            tabPage4.Controls.Add(RMS_Plot);
             tabPage4.Controls.Add(menuStrip4);
             tabPage4.Location = new Point(4, 29);
             tabPage4.Name = "tabPage4";
@@ -80,12 +80,12 @@
             // 
             // DeistvPlot
             // 
-            DeistvPlot.DisplayScale = 1.25F;
-            DeistvPlot.Dock = DockStyle.Fill;
-            DeistvPlot.Location = new Point(3, 31);
-            DeistvPlot.Name = "DeistvPlot";
-            DeistvPlot.Size = new Size(672, 310);
-            DeistvPlot.TabIndex = 0;
+            RMS_Plot.DisplayScale = 1.25F;
+            RMS_Plot.Dock = DockStyle.Fill;
+            RMS_Plot.Location = new Point(3, 31);
+            RMS_Plot.Name = "DeistvPlot";
+            RMS_Plot.Size = new Size(672, 310);
+            RMS_Plot.TabIndex = 0;
             // 
             // menuStrip4
             // 
@@ -361,7 +361,7 @@
         #endregion
 
         private TabPage tabPage4;
-        private ScottPlot.WinForms.FormsPlot DeistvPlot;
+        private ScottPlot.WinForms.FormsPlot RMS_Plot;
         private MenuStrip menuStrip4;
         private ToolStripMenuItem действующиеЗначенияToolStripMenuItem;
         private TabPage tabPage3;
