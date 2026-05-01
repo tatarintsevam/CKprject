@@ -48,9 +48,10 @@
             menuStrip3 = new MenuStrip();
             показатьГрафикToolStripMenuItem1 = new ToolStripMenuItem();
             tabPage5 = new TabPage();
+            Plotfotkl = new ScottPlot.WinForms.FormsPlot();
             menuStrip5 = new MenuStrip();
             показатьГрафикToolStripMenuItem = new ToolStripMenuItem();
-            Plotfotkl = new ScottPlot.WinForms.FormsPlot();
+            отчетToolStripMenuItem = new ToolStripMenuItem();
             tabPage4.SuspendLayout();
             menuStrip4.SuspendLayout();
             tabPage3.SuspendLayout();
@@ -78,12 +79,11 @@
             tabPage4.Text = "Действующие значения U";
             tabPage4.UseVisualStyleBackColor = true;
             // 
-            // DeistvPlot
+            // RMS_Plot
             // 
-            RMS_Plot.DisplayScale = 1.25F;
             RMS_Plot.Dock = DockStyle.Fill;
             RMS_Plot.Location = new Point(3, 31);
-            RMS_Plot.Name = "DeistvPlot";
+            RMS_Plot.Name = "RMS_Plot";
             RMS_Plot.Size = new Size(672, 310);
             RMS_Plot.TabIndex = 0;
             // 
@@ -117,7 +117,6 @@
             // 
             // harmPlot
             // 
-            harmPlot.DisplayScale = 1.25F;
             harmPlot.Dock = DockStyle.Fill;
             harmPlot.Location = new Point(3, 3);
             harmPlot.Name = "harmPlot";
@@ -138,7 +137,6 @@
             // 
             // FreqPlot
             // 
-            FreqPlot.DisplayScale = 1.25F;
             FreqPlot.Dock = DockStyle.Fill;
             FreqPlot.Location = new Point(3, 31);
             FreqPlot.Name = "FreqPlot";
@@ -200,7 +198,6 @@
             // 
             // OscPlot
             // 
-            OscPlot.DisplayScale = 1.25F;
             OscPlot.Dock = DockStyle.Fill;
             OscPlot.Location = new Point(3, 31);
             OscPlot.Name = "OscPlot";
@@ -210,7 +207,7 @@
             // menuStrip1
             // 
             menuStrip1.ImageScalingSize = new Size(20, 20);
-            menuStrip1.Items.AddRange(new ToolStripItem[] { файлToolStripMenuItem });
+            menuStrip1.Items.AddRange(new ToolStripItem[] { файлToolStripMenuItem, отчетToolStripMenuItem });
             menuStrip1.Location = new Point(3, 3);
             menuStrip1.Name = "menuStrip1";
             menuStrip1.Size = new Size(672, 28);
@@ -227,7 +224,7 @@
             // осциллограммаToolStripMenuItem
             // 
             осциллограммаToolStripMenuItem.Name = "осциллограммаToolStripMenuItem";
-            осциллограммаToolStripMenuItem.Size = new Size(206, 26);
+            осциллограммаToolStripMenuItem.Size = new Size(224, 26);
             осциллограммаToolStripMenuItem.Text = "Осциллограмма";
             осциллограммаToolStripMenuItem.Click += осциллограммаToolStripMenuItem_Click;
             // 
@@ -260,7 +257,6 @@
             // 
             // PlotUotkl
             // 
-            PlotUotkl.DisplayScale = 1.25F;
             PlotUotkl.Dock = DockStyle.Fill;
             PlotUotkl.Location = new Point(3, 31);
             PlotUotkl.Name = "PlotUotkl";
@@ -296,6 +292,14 @@
             tabPage5.Text = "Отклонение частоты";
             tabPage5.UseVisualStyleBackColor = true;
             // 
+            // Plotfotkl
+            // 
+            Plotfotkl.Dock = DockStyle.Fill;
+            Plotfotkl.Location = new Point(3, 31);
+            Plotfotkl.Name = "Plotfotkl";
+            Plotfotkl.Size = new Size(672, 310);
+            Plotfotkl.TabIndex = 1;
+            // 
             // menuStrip5
             // 
             menuStrip5.ImageScalingSize = new Size(20, 20);
@@ -313,14 +317,12 @@
             показатьГрафикToolStripMenuItem.Text = "Показать график";
             показатьГрафикToolStripMenuItem.Click += показатьГрафикToolStripMenuItem_Click;
             // 
-            // Plotfotkl
+            // отчетToolStripMenuItem
             // 
-            Plotfotkl.DisplayScale = 1.25F;
-            Plotfotkl.Dock = DockStyle.Fill;
-            Plotfotkl.Location = new Point(3, 31);
-            Plotfotkl.Name = "Plotfotkl";
-            Plotfotkl.Size = new Size(672, 310);
-            Plotfotkl.TabIndex = 1;
+            отчетToolStripMenuItem.Name = "отчетToolStripMenuItem";
+            отчетToolStripMenuItem.Size = new Size(62, 24);
+            отчетToolStripMenuItem.Text = "Отчет";
+            отчетToolStripMenuItem.Click += отчетToolStripMenuItem_Click;
             // 
             // Form1
             // 
@@ -387,5 +389,6 @@
         private ScottPlot.WinForms.FormsPlot Plotfotkl;
         private MenuStrip menuStrip5;
         private ToolStripMenuItem показатьГрафикToolStripMenuItem;
+        private ToolStripMenuItem отчетToolStripMenuItem;
     }
 }

@@ -1,6 +1,7 @@
 using ScottPlot;
 using ScottPlot.Colormaps;
 using ScottPlot.Plottables;
+using ScottPlot.WinForms;
 using System;
 using System.Collections.Generic;
 using System.Configuration;
@@ -20,11 +21,13 @@ namespace WinFormsApp6
 
     public partial class Form1 : Form
     {
-        
+
         private ConfigurationHandler configuration;
 
         private ThreePhaseVoltageAnalyzer voltageAnalyzer;
         private ThreePhaseVoltageAnalyzer voltageAnalyzerFreq;
+        private Quality_Calculator quality_Calculator;
+
         public Form1()
         {
             InitializeComponent();
@@ -58,7 +61,7 @@ namespace WinFormsApp6
         }
         private void LoadComtradeFile(string filePath)
         {
-            
+
 
             InfoToolStripStatusLabel.Text = $"Loading file: {Path.GetFileName(filePath)}";
 
@@ -67,9 +70,10 @@ namespace WinFormsApp6
 
             try
             {
-    
+
                 voltageAnalyzer = new ThreePhaseVoltageAnalyzer(filePath, 10, 10);//для FFT
                 voltageAnalyzerFreq = new ThreePhaseVoltageAnalyzer(filePath, 500, 500);//для freq
+                quality_Calculator = new Quality_Calculator(voltageAnalyzer, voltageAnalyzerFreq);
                 Text = $"Oscilloscope: {Path.GetFileName(filePath)}";
 
 
@@ -174,6 +178,8 @@ namespace WinFormsApp6
             OscPlot.Plot.ShowLegend(Edge.Right);
 
             OscPlot.Refresh();
+
+           
         }
 
         private void файлToolStripMenuItem_Click_Click(object sender, EventArgs e)
@@ -254,11 +260,11 @@ namespace WinFormsApp6
                 phaseA[i] = (avgAarray[i] - nominalU) * 100 / nominalU;
                 timeSeconds[i] = (voltageAnalyzer.TimeStampsRms[i] - voltageAnalyzer.TimeStampsRms[0]).TotalSeconds;
             }
-        
+
 
             var phA = PlotUotkl.Plot.Add.SignalXY(timeSeconds, phaseA);
             phA.LegendText = "deltaUa";
-           
+
 
 
             PlotUotkl.Plot.Axes.AutoScale();
@@ -270,6 +276,7 @@ namespace WinFormsApp6
 
 
         }
+
         private void Plot_frequency_Difference()
         {
             double NominalFreq = voltageAnalyzerFreq.GetNominalFrequency();
@@ -284,7 +291,7 @@ namespace WinFormsApp6
             for (int i = 0; i < dataPoints; i++)
             {
                 timeSeconds[i] = (voltageAnalyzerFreq.TimeStampsFreq[i] - startTime).TotalSeconds;
-                phaseA[i] = voltageAnalyzerFreq.PhaseAFreq[i]- NominalFreq;
+                phaseA[i] = voltageAnalyzerFreq.PhaseAFreq[i] - NominalFreq;
 
 
             }
@@ -391,92 +398,23 @@ namespace WinFormsApp6
 
         private void результатыToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            int CountDiff_dfp = 0;
-            int CountDiff_dfn = 0;
-           
 
-            double NominalFreq = voltageAnalyzer.GetNominalFrequency();
-         
-
-            double[] avgAarray = voltageAnalyzer.PhaseAFreq.ToArray();
-
-            int samplingRate = (int)voltageAnalyzer.GetSamplingRate();
-            int windowSizePoints = (int)(samplingRate * 10 / 50);
-            int stepSizePoints = (int)(samplingRate * 10 / 50);
-            int estimatesPer10sec = (int)(10.0 / (10.0 / NominalFreq));
-            double FreqValuesPerSecond = (double)samplingRate / stepSizePoints;
+            double avgA = quality_Calculator.Calculate_Frequency_Quality();
 
 
-            long PeriodsIn10sec = (int)(estimatesPer10sec);
-
-
-            long numberOf10SecIntervals = voltageAnalyzer.PhaseAFIR.Length / (10 * samplingRate);
-
-            double[] avgAIn10sec = new double[numberOf10SecIntervals];
-
-
-            for (int i = 0; i < numberOf10SecIntervals; i++)
-            {
-
-                double[] windowNSeconds = new double[PeriodsIn10sec ];
-                Array.Copy(avgAarray, i * (PeriodsIn10sec ), windowNSeconds, 0, PeriodsIn10sec);
-                avgAIn10sec[i] = windowNSeconds.Average();
-
-                if (avgAIn10sec[i] - 50 > 0.2)
-                {
-                    CountDiff_dfp++;
-                }
-                if (avgAIn10sec[i] - 50 < -0.2)
-                {
-                    CountDiff_dfn++;
-                }
-            }
-            double avgA = avgAIn10sec.Average();
-            string TextToWrite = $"\n Отклонение частоты {(avgA - NominalFreq):F4} Гц \r\n";
-            File.AppendAllText("results.txt", TextToWrite);
-
-
-            MessageBox.Show($"частота фазы А {avgA:F4};\n отклонение частоты фазы А {(avgA - NominalFreq):F4}Гц;\n", "Усредненная частота для фазы А и отклонение частоты:",
+            MessageBox.Show($"частота фазы А {avgA:F4};\n отклонение частоты фазы А {(avgA - quality_Calculator.NominalFreq):F4}Гц;\n Отклонение частоты более +-0,2Гц длилось {quality_Calculator.CountDiff_df_02 *10} секунд; \n Отклонение частоты более +-0,4Гц длилось {quality_Calculator.CountDiff_df_04 * 10} секунд", "Усредненная частота для фазы А и отклонение частоты:",
                     MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
         private void действующиеЗначенияToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            int samplingRate = (int)voltageAnalyzer.GetSamplingRate();
-            int CountDiff_Up = 0;
-            int CountDiff_Un = 0;
-            double nominalU = 6000;
-            double[] avgAarray = voltageAnalyzer.PhaseARms.ToArray();
-            int rmsValuesIn10min = (int)(5 * voltageAnalyzer.PhaseA.Count/ (samplingRate));
-            Debug.WriteLine(voltageAnalyzer.PhaseARms.Count + " voltageAnalyzer.PhaseARms.Count ?=6.600.000");
-            Debug.WriteLine(rmsValuesIn10min + " rmsValuesIn10min - 660*5??");
-            int numberOf10minIntervals = (int)voltageAnalyzer.PhaseA.Count / (600*samplingRate);
-            double[] avgA10min = new double[numberOf10minIntervals];
-            Debug.WriteLine(numberOf10minIntervals + " numberOf10minIntervals - 1??");
-            for (int i = 0; i < numberOf10minIntervals; i++)
-            {
-                Debug.WriteLine(1);
-                double[] windowNSeconds = new double[rmsValuesIn10min];
-                Array.Copy(avgAarray, i * (rmsValuesIn10min), windowNSeconds, 0, rmsValuesIn10min);
-                avgA10min[i] = Math.Sqrt(windowNSeconds.Average(x => x * x));
-                if (avgA10min[i] > 1.1 * nominalU)
-                {
-                    CountDiff_Up++;
-                }
-                if (avgA10min[i] < 0.9 * nominalU)
-                {
-                    CountDiff_Un++;
-                }
 
-            }
 
-            double avgA10min1 = Math.Sqrt(avgA10min.Average(x => x * x));
+            double avgA10min1 = quality_Calculator.Calculate_Voltage_quality();
 
-            string TextToWrite = $"\n Отклонение U {((avgA10min1 - nominalU) * 100 / nominalU):F2} % \r\n";
 
-            File.AppendAllText("results.txt", TextToWrite);
 
-            MessageBox.Show($"Отклонение действующего значения напряжения фазы А: \n Отклонение U {((-nominalU + avgA10min1) * 100 / nominalU):F2} %;\n отклонение больше +10% было {CountDiff_Up * 10} минут \n Отклонение меньше -10% было {CountDiff_Un * 10} минут \n", "Действующие значения U для фазы А и отклонение частоты:",
+            MessageBox.Show($"Отклонение действующего значения напряжения фазы А: \n Отклонение U {((-quality_Calculator.nominalU + avgA10min1) * 100 / quality_Calculator.nominalU):F2} %;\n отклонение больше +10% было {quality_Calculator.CountDiff_Up * 10} минут \n Отклонение меньше -10% было {quality_Calculator.CountDiff_Un * 10} минут \n", "Действующие значения U для фазы А и отклонение частоты:",
                     MessageBoxButtons.OK, MessageBoxIcon.Information);
 
         }
@@ -492,6 +430,44 @@ namespace WinFormsApp6
         private void показатьГрафикToolStripMenuItem_Click(object sender, EventArgs e)
         {
             Plot_frequency_Difference();
+        }
+        private void SavePlot(FormsPlot plot, string filePath)
+        { plot.Plot.SavePng(filePath, 800, 600); }
+     
+
+        private void отчетToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            if (voltageAnalyzer == null || voltageAnalyzerFreq == null)
+            {
+                MessageBox.Show("Сначала загрузите файл COMTRADE", "Ошибка",
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            using (SaveFileDialog saveFileDialog = new SaveFileDialog())
+            {
+                saveFileDialog.Filter = "HTML файлы (*.html)|*.html|Все файлы (*.*)|*.*";
+                saveFileDialog.Title = "Сохранить отчет как";
+                saveFileDialog.FileName = $"Отчет_{DateTime.Now:yyyyMMdd_HHmmss}.html";
+
+                if (saveFileDialog.ShowDialog() == DialogResult.OK)
+                {
+                    try
+                    {
+                        var reportGenerator = new HTMLReportGenerator(voltageAnalyzer, voltageAnalyzerFreq, quality_Calculator, saveFileDialog.FileName);
+                        reportGenerator.GenerateReport();
+                        reportGenerator.OpenInBrowser();
+
+                        MessageBox.Show($"Отчет успешно сохранен в файл:\n{saveFileDialog.FileName}",
+                            "Успех", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show($"Ошибка при генерации отчета: {ex.Message}",
+                            "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
+                }
+            }
         }
     }
 }
