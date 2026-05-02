@@ -11,19 +11,25 @@ namespace WinFormsApp6
     public class HTMLReportGenerator
     {
         private readonly ThreePhaseVoltageAnalyzer _voltageAnalyzer;
-        private readonly ThreePhaseVoltageAnalyzer _voltageAnalyzerFreq;
         private readonly Quality_Calculator _quality_Calculator;
+        private readonly FrequencyCalculator _frequencyCalculator;
+        private readonly HarmnicsCalculator _harmnicsCalculator;
+        private readonly RMS_Calculator _rMS_Calculator;
         private readonly string _outputPath;
 
         public HTMLReportGenerator(ThreePhaseVoltageAnalyzer voltageAnalyzer,
-                                   ThreePhaseVoltageAnalyzer voltageAnalyzerFreq,
                                    Quality_Calculator quality_Calculator,
+                                   FrequencyCalculator frequencyCalculator,
+                                   HarmnicsCalculator harmnicsCalculator,
+                                   RMS_Calculator rMS_Calculator,
                                    string outputPath = "report.html")
         {
             _voltageAnalyzer = voltageAnalyzer;
-            _voltageAnalyzerFreq = voltageAnalyzerFreq;
+            _frequencyCalculator = frequencyCalculator; 
             _outputPath = outputPath;
             _quality_Calculator = quality_Calculator;
+            _harmnicsCalculator = harmnicsCalculator;
+            _rMS_Calculator = rMS_Calculator;
         }
 
         public void GenerateReport()
@@ -80,7 +86,7 @@ namespace WinFormsApp6
 
         private void GenerateFrequencyStatistics(StringBuilder html)
         {
-            var frequencies = _voltageAnalyzerFreq.PhaseAFreq.ToList();
+            var frequencies = _frequencyCalculator.PhaseAFreq.ToList();
             if (frequencies.Count == 0)
             {
                 html.AppendLine(" <h3>Пока что нет </h3>");
@@ -113,7 +119,7 @@ namespace WinFormsApp6
         private void GenerateVoltageStatistics(StringBuilder html)
         {
            
-            var voltages = _voltageAnalyzer.PhaseARms.ToList();
+            var voltages = _rMS_Calculator.PhaseARms.ToList();
             if (voltages.Count == 0) return;
 
             var AvgVoltage = _quality_Calculator.Calculate_Voltage_quality();
@@ -137,7 +143,7 @@ namespace WinFormsApp6
 
         private void GenerateHarmonicAnalysis(StringBuilder html)
         {
-            var harmonicsA = _voltageAnalyzer.PhaseAHarmonicsAmplitudes;
+            var harmonicsA = _harmnicsCalculator.PhaseAHarmonicsAmplitudes;
             if (harmonicsA == null || harmonicsA.Count == 0)
 
             {

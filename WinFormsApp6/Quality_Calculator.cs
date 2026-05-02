@@ -20,14 +20,22 @@ namespace WinFormsApp6
         public double NominalFreq = 50;
 
         private readonly ThreePhaseVoltageAnalyzer _voltageAnalyzer;
-        private readonly ThreePhaseVoltageAnalyzer _voltageAnalyzerFreq;
+        private readonly FrequencyCalculator _frequencyCalculator;
+        private readonly HarmnicsCalculator _harmnicsCalculator;
+        private readonly RMS_Calculator _rMS_Calculator;
 
 
         public Quality_Calculator(ThreePhaseVoltageAnalyzer voltageAnalyzer,
-                                   ThreePhaseVoltageAnalyzer voltageAnalyzerFreq)
+                                    FrequencyCalculator frequencyCalculator,
+                                    HarmnicsCalculator harmnicsCalculator,
+                                    RMS_Calculator rMS_Calculator)
+
+
         {
             _voltageAnalyzer = voltageAnalyzer;
-            _voltageAnalyzerFreq = voltageAnalyzerFreq;
+            _frequencyCalculator = frequencyCalculator;
+            _harmnicsCalculator= harmnicsCalculator;
+            _rMS_Calculator = rMS_Calculator;
         }
         
 
@@ -36,7 +44,7 @@ namespace WinFormsApp6
 
 
             int samplingRate = (int)_voltageAnalyzer.GetSamplingRate();
-            double[] avgAarray = _voltageAnalyzer.PhaseARms.ToArray();
+            double[] avgAarray = _rMS_Calculator.PhaseARms.ToArray();
             int rmsValuesIn10min = (int)(5 * _voltageAnalyzer.PhaseA.Count/ (samplingRate));
 
             int numberOf10minIntervals = (int)_voltageAnalyzer.PhaseA.Count / (600 * samplingRate);
@@ -71,19 +79,19 @@ namespace WinFormsApp6
 
          
 
-            double[] avgAarray = _voltageAnalyzerFreq.PhaseAFreq.ToArray();
+            double[] avgAarray = _frequencyCalculator.PhaseAFreq.ToArray();
 
-            int numberOf10SecIntervals = _voltageAnalyzerFreq.PhaseAFreq.Count;
+            int numberOf10SecIntervals = _frequencyCalculator.PhaseAFreq.Count;
 
             for (int i = 0; i < numberOf10SecIntervals; i++)
             {
 
 
-                if (Math.Abs(avgAarray[i] - _voltageAnalyzerFreq.GetNominalFrequency()) > 0.2 && (Math.Abs(avgAarray[i] - _voltageAnalyzerFreq.GetNominalFrequency()) < 0.4) )
+                if (Math.Abs(avgAarray[i] - _voltageAnalyzer.GetNominalFrequency()) > 0.2 && (Math.Abs(avgAarray[i] - _voltageAnalyzer.GetNominalFrequency()) < 0.4) )
                 {
                     CountDiff_df_02++;
                 }
-                if (Math.Abs(avgAarray[i] - _voltageAnalyzerFreq.GetNominalFrequency()) > 0.4 )
+                if (Math.Abs(avgAarray[i] - _voltageAnalyzer.GetNominalFrequency()) > 0.4 )
                 {
                     CountDiff_df_04++;
                 }

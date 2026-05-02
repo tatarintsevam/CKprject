@@ -27,6 +27,9 @@ namespace WinFormsApp6
         private ThreePhaseVoltageAnalyzer voltageAnalyzer;
         private ThreePhaseVoltageAnalyzer voltageAnalyzerFreq;
         private Quality_Calculator quality_Calculator;
+        private FrequencyCalculator frequencyCalculator;
+        private HarmnicsCalculator harmnicsCalculator;
+        private RMS_Calculator rMS_Calculator;
 
         public Form1()
         {
@@ -71,9 +74,13 @@ namespace WinFormsApp6
             try
             {
 
-                voltageAnalyzer = new ThreePhaseVoltageAnalyzer(filePath, 10, 10);//для FFT
-                voltageAnalyzerFreq = new ThreePhaseVoltageAnalyzer(filePath, 500, 500);//для freq
-                quality_Calculator = new Quality_Calculator(voltageAnalyzer, voltageAnalyzerFreq);
+                voltageAnalyzer = new ThreePhaseVoltageAnalyzer(filePath, 10, 10);
+                voltageAnalyzerFreq = new ThreePhaseVoltageAnalyzer(filePath, 500, 500);
+                harmnicsCalculator = new HarmnicsCalculator(voltageAnalyzer);
+                rMS_Calculator = new RMS_Calculator(voltageAnalyzer);
+                frequencyCalculator = new FrequencyCalculator(voltageAnalyzerFreq);
+                quality_Calculator = new Quality_Calculator(voltageAnalyzer,  frequencyCalculator, harmnicsCalculator, rMS_Calculator);
+                
                 Text = $"Oscilloscope: {Path.GetFileName(filePath)}";
 
 
@@ -85,6 +92,7 @@ namespace WinFormsApp6
                 PlotFreqData();
                 PlotHarmData();
                 PlotRMSData();
+                
             }
             catch (Exception ex)
             {
@@ -102,8 +110,8 @@ namespace WinFormsApp6
             harmPlot.Plot.Clear();
 
             // Подготавливаем для отображения средние за все время спектры по каждой из фаз
-            int harmPoints = voltageAnalyzer.PhaseAHarmonicsAmplitudes[0].Count; // Количество гармоник по фазе
-            int dataPoints = voltageAnalyzer.PhaseAHarmonicsAmplitudes.Count; // Количество временных отсчетов
+            int harmPoints = harmnicsCalculator.PhaseAHarmonicsAmplitudes[0].Count; // Количество гармоник по фазе
+            int dataPoints = harmnicsCalculator.PhaseAHarmonicsAmplitudes.Count; // Количество временных отсчетов
 
             double[] harmonics = new double[harmPoints];
 
@@ -119,7 +127,7 @@ namespace WinFormsApp6
                 // Вычисление среднего значения
                 for (int j = 0; j < dataPoints; j++)
                 {
-                    phaseA[i] = phaseA[i] + voltageAnalyzer.PhaseAHarmonicsAmplitudes[j][i];
+                    phaseA[i] = phaseA[i] + harmnicsCalculator.PhaseAHarmonicsAmplitudes[j][i];
 
                 }
 
@@ -210,25 +218,25 @@ namespace WinFormsApp6
         }
         private void PlotFreqData()
         {
-            if (voltageAnalyzerFreq == null)
+            if (frequencyCalculator == null)
                 return;
 
 
 
             FreqPlot.Plot.Clear();
 
-            int dataPoints = voltageAnalyzerFreq.PhaseAFreq.Count;
+            int dataPoints = frequencyCalculator.PhaseAFreq.Count;
 
 
             double[] timeSeconds = new double[dataPoints];
-            DateTime startTime = voltageAnalyzerFreq.TimeStampsFreq[0];
+            DateTime startTime = frequencyCalculator.TimeStampsFreq[0];
 
 
             double[] phaseA = new double[dataPoints];
             for (int i = 0; i < dataPoints; i++)
             {
-                timeSeconds[i] = (voltageAnalyzerFreq.TimeStampsFreq[i] - startTime).TotalSeconds;
-                phaseA[i] = voltageAnalyzerFreq.PhaseAFreq[i];
+                timeSeconds[i] = (frequencyCalculator.TimeStampsFreq[i] - startTime).TotalSeconds;
+                phaseA[i] = frequencyCalculator.PhaseAFreq[i];
 
 
             }
@@ -250,7 +258,7 @@ namespace WinFormsApp6
         {
 
             double nominalU = 6000;
-            double[] avgAarray = voltageAnalyzer.PhaseARms.ToArray();//3300 значений
+            double[] avgAarray = rMS_Calculator.PhaseARms.ToArray();//3300 значений
 
             double[] timeSeconds = new double[avgAarray.Length];
             double[] phaseA = new double[avgAarray.Length];
@@ -258,12 +266,12 @@ namespace WinFormsApp6
             for (int i = 0; i < avgAarray.Length; i++)
             {
                 phaseA[i] = (avgAarray[i] - nominalU) * 100 / nominalU;
-                timeSeconds[i] = (voltageAnalyzer.TimeStampsRms[i] - voltageAnalyzer.TimeStampsRms[0]).TotalSeconds;
+                timeSeconds[i] = (rMS_Calculator.TimeStampsRms[i] - rMS_Calculator.TimeStampsRms[0]).TotalSeconds;
             }
 
 
             var phA = PlotUotkl.Plot.Add.SignalXY(timeSeconds, phaseA);
-            phA.LegendText = "deltaUa";
+            phA.LegendText = "deltaUa, %";
 
 
 
@@ -279,19 +287,19 @@ namespace WinFormsApp6
 
         private void Plot_frequency_Difference()
         {
-            double NominalFreq = voltageAnalyzerFreq.GetNominalFrequency();
-            int dataPoints = voltageAnalyzerFreq.PhaseAFreq.Count;
+            double NominalFreq = voltageAnalyzer.GetNominalFrequency();
+            int dataPoints = frequencyCalculator.PhaseAFreq.Count;
 
 
             double[] timeSeconds = new double[dataPoints];
-            DateTime startTime = voltageAnalyzerFreq.TimeStampsFreq[0];
+            DateTime startTime = frequencyCalculator.TimeStampsFreq[0];
 
 
             double[] phaseA = new double[dataPoints];
             for (int i = 0; i < dataPoints; i++)
             {
-                timeSeconds[i] = (voltageAnalyzerFreq.TimeStampsFreq[i] - startTime).TotalSeconds;
-                phaseA[i] = voltageAnalyzerFreq.PhaseAFreq[i] - NominalFreq;
+                timeSeconds[i] = (frequencyCalculator.TimeStampsFreq[i] - startTime).TotalSeconds;
+                phaseA[i] = frequencyCalculator.PhaseAFreq[i] - NominalFreq;
 
 
             }
@@ -315,7 +323,7 @@ namespace WinFormsApp6
 
             RMS_Plot.Plot.Clear();
 
-            int dataPoints = voltageAnalyzer.PhaseARms.Count;
+            int dataPoints = rMS_Calculator.PhaseARms.Count;
 
             double[] timeSeconds = new double[dataPoints];
 
@@ -323,8 +331,8 @@ namespace WinFormsApp6
 
             for (int i = 0; i < dataPoints; i++)
             {
-                timeSeconds[i] = (voltageAnalyzer.TimeStampsRms[i] - voltageAnalyzer.TimeStampsRms[0]).TotalSeconds;
-                phaseA[i] = voltageAnalyzer.PhaseARms[i];
+                timeSeconds[i] = (rMS_Calculator.TimeStampsRms[i] - rMS_Calculator.TimeStampsRms[0]).TotalSeconds;
+                phaseA[i] = rMS_Calculator.PhaseARms[i];
 
 
             }
@@ -431,40 +439,37 @@ namespace WinFormsApp6
         {
             Plot_frequency_Difference();
         }
-        private void SavePlot(FormsPlot plot, string filePath)
-        { plot.Plot.SavePng(filePath, 800, 600); }
-     
 
         private void отчетToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            if (voltageAnalyzer == null || voltageAnalyzerFreq == null)
+            if (voltageAnalyzer == null || frequencyCalculator == null)
             {
-                MessageBox.Show("Сначала загрузите файл COMTRADE", "Ошибка",
-                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("нет данных", "Ошибка",
+                    MessageBoxButtons.OK);
                 return;
             }
 
             using (SaveFileDialog saveFileDialog = new SaveFileDialog())
             {
                 saveFileDialog.Filter = "HTML файлы (*.html)|*.html|Все файлы (*.*)|*.*";
-                saveFileDialog.Title = "Сохранить отчет как";
-                saveFileDialog.FileName = $"Отчет_{DateTime.Now:yyyyMMdd_HHmmss}.html";
+                saveFileDialog.Title = "Сохранить отчет";
+                saveFileDialog.FileName = $"Отчет_дата:{DateTime.Now:yyyyMMdd_HHmmss}.html";
 
                 if (saveFileDialog.ShowDialog() == DialogResult.OK)
                 {
                     try
                     {
-                        var reportGenerator = new HTMLReportGenerator(voltageAnalyzer, voltageAnalyzerFreq, quality_Calculator, saveFileDialog.FileName);
+                        var reportGenerator = new HTMLReportGenerator(voltageAnalyzer,  quality_Calculator, frequencyCalculator, harmnicsCalculator, rMS_Calculator, saveFileDialog.FileName);
                         reportGenerator.GenerateReport();
                         reportGenerator.OpenInBrowser();
 
-                        MessageBox.Show($"Отчет успешно сохранен в файл:\n{saveFileDialog.FileName}",
-                            "Успех", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        MessageBox.Show($"Отчет сохранен в файл:\n{saveFileDialog.FileName}",
+                            "Отчет", MessageBoxButtons.OK);
                     }
                     catch (Exception ex)
                     {
-                        MessageBox.Show($"Ошибка при генерации отчета: {ex.Message}",
-                            "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        MessageBox.Show($"не получилось создать отчет: {ex.Message}",
+                            "Ошбка", MessageBoxButtons.OK);
                     }
                 }
             }
