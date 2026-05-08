@@ -17,7 +17,6 @@ namespace WinFormsApp6
         public int CountDiff_df_04 = 0;
 
         public double nominalU = 6000;
-        public double NominalFreq = 50;
 
         private readonly ThreePhaseVoltageAnalyzer _voltageAnalyzer;
         private readonly FrequencyCalculator _frequencyCalculator;

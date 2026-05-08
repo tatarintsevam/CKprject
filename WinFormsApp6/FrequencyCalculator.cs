@@ -1,5 +1,6 @@
 ﻿using ComtradeHandler.Core.Models;
 using System;
+using System.IO; 
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -14,6 +15,7 @@ using WinFormsApp6;
 using Wisp.Comtrade;
 using Wisp.Comtrade.Models;
 using static System.Runtime.InteropServices.JavaScript.JSType;
+using System.Text;
 
 namespace WinFormsApp6
 {
@@ -62,6 +64,7 @@ namespace WinFormsApp6
                 int middlePoint = startPoint + windowSizePoints / 2;
                 DateTime timeStamp = _voltageAnalyzer.GetComtradeData().Configuration.StartTime.AddSeconds((double)middlePoint / samplingRate);
 
+                WriteCSVFreq(timeStamp, frequencyA);
                 // Сохранение результатов
                 TimeStampsFreq.Add(timeStamp);
 
@@ -70,6 +73,37 @@ namespace WinFormsApp6
 
             }
 
+
+        }
+        private void WriteCSVFreq(DateTime timeStamp, double frequencyA)
+        {
+            string csvFilePath = "outputFreq.csv"; 
+            
+            try 
+            {
+                bool fileExists = File.Exists(csvFilePath);
+
+                using (StreamWriter sw = new StreamWriter(csvFilePath, true, Encoding.UTF8)) 
+                    {
+
+                    if (!fileExists)
+                    {
+                        sw.WriteLine("Время; Частота");
+                        sw.WriteLine($"{timeStamp: HH:mm:ss}; {frequencyA.ToString("F3", System.Globalization.CultureInfo.InvariantCulture)}");
+                    }
+                    else
+                    {   // Запись данных
+                        sw.WriteLine($"{timeStamp: HH:mm:ss}; {frequencyA.ToString("F3", System.Globalization.CultureInfo.InvariantCulture)}");
+                    }
+
+                    }
+                         
+
+            }
+            catch (Exception ex) 
+            {
+                Debug.WriteLine($"Ошибка при записи в файл: {ex.Message}");
+            }
 
         }
         protected double CalculateFrequencyByZeroCrossings2(double[] data, int samplingRate, double _nominalFrequency)

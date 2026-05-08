@@ -1,10 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Numerics;
 using System.Text;
 using System.Threading.Tasks;
 using VoltageAnalyzer;
+using static Plotly.NET.StyleParam;
 
 namespace WinFormsApp6
 {
@@ -15,6 +17,7 @@ namespace WinFormsApp6
         public List<List<double>> PhaseAHarmonicsAmplitudes { get; private set; }
 
         public List<List<double>> PhaseAHarmonicsPhases { get; private set; }
+        private int HarmNum;
         public HarmnicsCalculator(ThreePhaseVoltageAnalyzer voltageAnalyzer)
          
         {
@@ -39,10 +42,42 @@ namespace WinFormsApp6
                 amplitudes.Add((Math.Sqrt(dft[index].Real * dft[index].Real +
                     dft[index].Imaginary * dft[index].Imaginary) * 2 / dft.Length));
                 phases.Add(Math.Atan2(dft[index].Imaginary, dft[index].Real));
+                
             }
 
             return (amplitudes, phases);
         }
+        private void WriteCSV(double Amplitude, double phase)
+        {
+            string csvFilePath = "outputHarm.csv";
+            HarmNum++;
+            try
+            {
+                bool fileExists = File.Exists(csvFilePath);
+
+                using (StreamWriter sw = new StreamWriter(csvFilePath, true, Encoding.UTF8))
+                {
+
+                    if (!fileExists)
+                    {
+                        sw.WriteLine("Номер гармоники; Амплитуда; фаза");
+                    }
+                    else
+                    {   // Запись данных
+                        sw.WriteLine($"{HarmNum};{Amplitude}; {phase.ToString("F3", System.Globalization.CultureInfo.InvariantCulture)}");
+                    }
+
+                }
+
+
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Ошибка при записи в файл: {ex.Message}");
+            }
+
+        }
+
         protected void CalculateHarmonics()
         {
             TimeStampsHarmonics.Clear();
@@ -70,10 +105,11 @@ namespace WinFormsApp6
                     (double)middlePoint / samplingRate);
 
                 TimeStampsHarmonics.Add(timeStamp);
-                PhaseAHarmonicsAmplitudes.Add(amplitudesA);
 
+                PhaseAHarmonicsAmplitudes.Add(amplitudesA);
                 PhaseAHarmonicsPhases.Add(phaseA);
 
+               
             }
 
 

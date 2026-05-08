@@ -30,7 +30,12 @@ namespace WinFormsApp6
         private FrequencyCalculator frequencyCalculator;
         private HarmnicsCalculator harmnicsCalculator;
         private RMS_Calculator rMS_Calculator;
+        private string frequencyPlotPath;
+        private string voltagePlotPath;
+        private string rmsPlotPath;
+        private string harmPlotPath;
 
+ 
         public Form1()
         {
             InitializeComponent();
@@ -139,6 +144,7 @@ namespace WinFormsApp6
             var phA = harmPlot.Plot.Add.Bars(harmonics, phaseA);
             phA.LegendText = "Ua";
 
+        
             harmPlot.Plot.Axes.AutoScale();
 
 
@@ -146,6 +152,52 @@ namespace WinFormsApp6
 
 
             harmPlot.Refresh();
+
+            //сохраняем графику
+            string reportsDir = AppDomain.CurrentDomain.BaseDirectory;
+            string PlotImage = Path.Combine(reportsDir, "harmonics_plot.png");
+            harmPlot.Plot.SavePng(PlotImage, 800, 400);
+            harmPlotPath = PlotImage;
+
+            //записываем результат в CSV
+            for (int i = 0; i < harmonics.Length; i++)
+            {
+                WriteCSV_Harm(harmonics[i], phaseA[i]);
+
+            }
+
+        }
+        private void WriteCSV_Harm(double harmonic, double Amplitude)
+        {
+            string csvFilePath = "outputHarm.csv";
+
+            try
+            {
+                bool fileExists = File.Exists(csvFilePath);
+
+                using (StreamWriter sw = new StreamWriter(csvFilePath, true, Encoding.UTF8))
+                {
+
+                    if (!fileExists)
+                    {
+                        sw.WriteLine("Номер гармоники ; Амплитуда");
+                        sw.WriteLine($"{harmonic}; {Amplitude.ToString("F3", System.Globalization.CultureInfo.InvariantCulture)}");
+                    }
+                    else
+                    {   // Запись данных
+                        sw.WriteLine($"{harmonic}; {Amplitude.ToString("F3", System.Globalization.CultureInfo.InvariantCulture)}");
+                    }
+
+                }
+
+
+
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Ошибка при записи в файл: {ex.Message}");
+            }
+
         }
         private void PlotVoltageData()
         {
@@ -187,7 +239,18 @@ namespace WinFormsApp6
 
             OscPlot.Refresh();
 
-           
+            OscPlot.Refresh();
+            var originalLimits = OscPlot.Plot.Axes.GetLimits();
+            OscPlot.Plot.Axes.SetLimits(left: 100, right: 100.06, bottom: -9000, top: 9000);
+
+            string reportsDir = AppDomain.CurrentDomain.BaseDirectory;
+            string PlotImage = Path.Combine(reportsDir, "voltage_plot.png");
+            OscPlot.Plot.SavePng(PlotImage, 800, 400);
+            voltagePlotPath = PlotImage;
+
+            OscPlot.Plot.Axes.SetLimits(originalLimits);
+            OscPlot.Refresh();
+
         }
 
         private void файлToolStripMenuItem_Click_Click(object sender, EventArgs e)
@@ -244,16 +307,29 @@ namespace WinFormsApp6
             var phA = FreqPlot.Plot.Add.SignalXY(timeSeconds, phaseA);
             phA.LegendText = "Ua";
 
-
+          
 
 
             FreqPlot.Plot.Axes.AutoScale();
 
             FreqPlot.Plot.ShowLegend(Edge.Right);
 
+         
+            string reportsDir = AppDomain.CurrentDomain.BaseDirectory;
+            string PlotImage = Path.Combine(reportsDir, "frequency_plot.png");
+
+
+            FreqPlot.Plot.SavePng(PlotImage, 800, 400);
+            frequencyPlotPath = PlotImage;
+
+          
 
             FreqPlot.Refresh();
+
+          
         }
+
+
         private void Plot_Voltage_Difference()
         {
 
@@ -343,10 +419,20 @@ namespace WinFormsApp6
 
 
             RMS_Plot.Plot.Axes.AutoScale();
-
             RMS_Plot.Plot.ShowLegend(Edge.Right);
 
 
+            RMS_Plot.Refresh();
+            var originalLimits = RMS_Plot.Plot.Axes.GetLimits();
+
+            RMS_Plot.Plot.Axes.SetLimits(left: 100, right: 125, bottom: 5000, top: 5800);
+         
+            string reportsDir = AppDomain.CurrentDomain.BaseDirectory;
+            string PlotImage = Path.Combine(reportsDir, "RMS_plot.png");
+            RMS_Plot.Plot.SavePng(PlotImage, 800, 400);
+            rmsPlotPath = PlotImage;
+
+            RMS_Plot.Plot.Axes.SetLimits(originalLimits);
             RMS_Plot.Refresh();
         }
 
@@ -410,7 +496,7 @@ namespace WinFormsApp6
             double avgA = quality_Calculator.Calculate_Frequency_Quality();
 
 
-            MessageBox.Show($"частота фазы А {avgA:F4};\n отклонение частоты фазы А {(avgA - quality_Calculator.NominalFreq):F4}Гц;\n Отклонение частоты более +-0,2Гц длилось {quality_Calculator.CountDiff_df_02 *10} секунд; \n Отклонение частоты более +-0,4Гц длилось {quality_Calculator.CountDiff_df_04 * 10} секунд", "Усредненная частота для фазы А и отклонение частоты:",
+            MessageBox.Show($"частота фазы А {avgA:F4};\n отклонение частоты фазы А {(avgA - voltageAnalyzer.GetNominalFrequency()):F4}Гц;\n Отклонение частоты более +-0,2Гц длилось {quality_Calculator.CountDiff_df_02 *10} секунд; \n Отклонение частоты более +-0,4Гц длилось {quality_Calculator.CountDiff_df_04 * 10} секунд", "Усредненная частота для фазы А и отклонение частоты:",
                     MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
@@ -448,18 +534,26 @@ namespace WinFormsApp6
                     MessageBoxButtons.OK);
                 return;
             }
+            var plotPaths = new Dictionary<string, string>
+            {
+                ["frequency"] = frequencyPlotPath,
+                ["voltage"] = voltagePlotPath,
+                ["rms"] = rmsPlotPath,
+                ["harmonics"] = harmPlotPath
+            };
 
             using (SaveFileDialog saveFileDialog = new SaveFileDialog())
             {
                 saveFileDialog.Filter = "HTML файлы (*.html)|*.html|Все файлы (*.*)|*.*";
                 saveFileDialog.Title = "Сохранить отчет";
-                saveFileDialog.FileName = $"Отчет_дата:{DateTime.Now:yyyyMMdd_HHmmss}.html";
+                saveFileDialog.FileName = $"дата {DateTime.Now:yyyyMMdd_HHmmss}.html";
 
                 if (saveFileDialog.ShowDialog() == DialogResult.OK)
                 {
                     try
                     {
-                        var reportGenerator = new HTMLReportGenerator(voltageAnalyzer,  quality_Calculator, frequencyCalculator, harmnicsCalculator, rMS_Calculator, saveFileDialog.FileName);
+                        var reportGenerator = new HTMLReportGenerator(voltageAnalyzer,  quality_Calculator, frequencyCalculator, harmnicsCalculator, rMS_Calculator, saveFileDialog.FileName,
+                               plotPaths);
                         reportGenerator.GenerateReport();
                         reportGenerator.OpenInBrowser();
 

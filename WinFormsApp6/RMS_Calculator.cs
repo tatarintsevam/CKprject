@@ -1,6 +1,7 @@
 ﻿using ComtradeHandler.Core.Models;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -58,7 +59,7 @@ namespace WinFormsApp6
                 // Расчет временной метки для середины окна
                 int middlePoint = startPoint + windowSizePoints / 2;
                 DateTime timeStamp = _voltageAnalyzer.GetComtradeData().Configuration.StartTime.AddSeconds((double)middlePoint / samplingRate);
-
+                WriteCSV_RMS( timeStamp, rmsA);
                 // Сохранение результатов
                 TimeStampsRms.Add(timeStamp);
                 PhaseARms.Add(rmsA);
@@ -66,6 +67,38 @@ namespace WinFormsApp6
 
             }
 
+
+        }
+        private void WriteCSV_RMS(DateTime timeStamp, double RMS)
+        {
+            string csvFilePath = "outputRMS.csv";
+
+            try
+            {
+                bool fileExists = File.Exists(csvFilePath);
+
+                using (StreamWriter sw = new StreamWriter(csvFilePath, true, Encoding.UTF8))
+                {
+
+                    if (!fileExists)
+                    {
+                        sw.WriteLine("Время; Действующее значение Ua");
+                        sw.WriteLine($"{timeStamp: HH:mm:ss}; {RMS.ToString("F3", System.Globalization.CultureInfo.InvariantCulture)}");
+                    }
+                    else
+                    {   // Запись данных
+                        sw.WriteLine($"{timeStamp: HH:mm:ss}; {RMS.ToString("F3", System.Globalization.CultureInfo.InvariantCulture)}");
+                    }
+
+                }
+
+
+
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Ошибка при записи в файл: {ex.Message}");
+            }
 
         }
         protected void InitializeResultLists()

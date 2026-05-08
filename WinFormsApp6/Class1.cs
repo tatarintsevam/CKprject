@@ -26,17 +26,18 @@ namespace VoltageAnalyzer
 
         protected int _phaseAIndex;
         protected double _nominalFrequency;
+
         public double GetNominalFrequency() => configuration.Frequency;
         public string GetStationName() => configuration.StationName;    
         public double GetSamplingRate() => (int)configuration.SampleRates[0].SamplingFrequency;
         public List<double> GetPhaseAData() => PhaseA;
+        
 
         public double[] GetPhaseAFIR() => PhaseAFIR;
         public RecordReader GetComtradeData() => _comtradeData;
         public ConfigurationHandler GetConfiguration() => configuration;
         public int GetWindowSizePeriods() => _windowSizePeriods;
         public int GetStepSizePeriods() => _stepSizePeriods;
-
         public List<double> PhaseA { get; private set; }
 
 
@@ -44,23 +45,14 @@ namespace VoltageAnalyzer
         protected int _stepSizePeriods;
 
 
-
-        // Добавляем новые списки для хранения RMS значений
-
         public List<DateTime> TimeStampsOsc { get; private set; }
-  
 
-        // Новые свойства для хранения результатов гармоник
-
-
-
-
+    
         public ThreePhaseVoltageAnalyzer(string comtradeFilePath, int windowSizePeriods, int stepSizePeriods)
         {
 
             _windowSizePeriods = windowSizePeriods;
             _stepSizePeriods = stepSizePeriods;
-
 
             configuration = new ConfigurationHandler(comtradeFilePath);
 
@@ -77,25 +69,9 @@ namespace VoltageAnalyzer
 
             ReadAllVoltages();
 
-            //CalculateAll();
 
         }
 
-        //protected void ClearResults()
-        //{
-        //    TimeStampsOsc.Clear();
-
-        //    PhaseA.Clear();
-
-        //}
-
-        //protected void CalculateAll()
-        //{
-
-        //    CalculateRmsValues();
-
-
-        //}
 
 
         protected void ClearResults()
@@ -280,14 +256,6 @@ namespace VoltageAnalyzer
 
             return result;
         }
-
-        //protected void InitializeOscLists()
-        //{
-        //    TimeStampsOsc = new List<DateTime>();
-
-        //    PhaseA = new List<double>();
-           
-        //}
 
 
     }

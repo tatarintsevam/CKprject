@@ -5,6 +5,8 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using VoltageAnalyzer;
+using Plotly.NET;
+using Plotly.NET.ImageExport;
 
 namespace WinFormsApp6
 {
@@ -16,13 +18,18 @@ namespace WinFormsApp6
         private readonly HarmnicsCalculator _harmnicsCalculator;
         private readonly RMS_Calculator _rMS_Calculator;
         private readonly string _outputPath;
-
+        private readonly string _frequencyPlotPath;
+        private readonly string _voltagePlotPath;
+        private readonly string _rmsPlotPath;
+        private readonly string _harmPlotPath;
+        private readonly Dictionary<string, string> _plotPaths;
         public HTMLReportGenerator(ThreePhaseVoltageAnalyzer voltageAnalyzer,
                                    Quality_Calculator quality_Calculator,
                                    FrequencyCalculator frequencyCalculator,
                                    HarmnicsCalculator harmnicsCalculator,
                                    RMS_Calculator rMS_Calculator,
-                                   string outputPath = "report.html")
+                                   string outputPath = "report.html",
+                               Dictionary<string, string> plotPaths = null)
         {
             _voltageAnalyzer = voltageAnalyzer;
             _frequencyCalculator = frequencyCalculator; 
@@ -30,6 +37,11 @@ namespace WinFormsApp6
             _quality_Calculator = quality_Calculator;
             _harmnicsCalculator = harmnicsCalculator;
             _rMS_Calculator = rMS_Calculator;
+            _plotPaths = plotPaths;
+            _frequencyPlotPath = plotPaths["frequency"];
+            _voltagePlotPath = plotPaths["voltage"];
+            _rmsPlotPath= plotPaths["rms"];
+            _harmPlotPath = plotPaths["harmonics"];
         }
 
         public void GenerateReport()
@@ -59,14 +71,16 @@ namespace WinFormsApp6
             html.AppendLine("    <div class='container'>");
 
             // Заголовок
-            html.AppendLine($" <h1>Анализ показателей качесттва электроэнергии</h1>");
+            html.AppendLine($" <h1>Анализ показателей качества электроэнергии</h1>");
             html.AppendLine($"<p>Станция: {_voltageAnalyzer.GetStationName()}</p>");
             html.AppendLine($" <p> Номинальная частота:  {_voltageAnalyzer.GetNominalFrequency():F2} Гц</p>");
             html.AppendLine($" <p> Частота дискретизации: {_voltageAnalyzer.GetSamplingRate():F2} Гц</p>");
             html.AppendLine($" <p> Дата генерации отчета:{DateTime.Now:dd.MM.yyyy HH:mm:ss}</p>");
 
+
             // Статистика по частоте
             GenerateFrequencyStatistics(html);
+    
 
             // Статистика по напряжению
             GenerateVoltageStatistics(html);
@@ -100,11 +114,19 @@ namespace WinFormsApp6
             double TimeFrequencyOutOf04 = _quality_Calculator.CountDiff_df_04 * 10;
             double AverageDifference = avgFreq - nominalFreq;
 
+           
 
-            //выводим  отклонение частоты(все 66 значений? ) усредненное, а так же информацию о том сколько времени было превышение и тд и тп, потом сколько в процентах времени было превышение, также потом будет график
-          
+
 
             html.AppendLine(" <h2>Анализ частоты</h2>");
+            //вставляем график
+            if (!string.IsNullOrEmpty(_frequencyPlotPath) && File.Exists(_frequencyPlotPath))
+            {
+                html.AppendLine("<h3>График изменения частоты по времени</h3>");
+                string imgSrc = Path.GetFileName(_frequencyPlotPath);
+                html.AppendLine($"<img src='{imgSrc}' alt='График частоты' style='max-width:100%; height:auto; border:1px solid #ddd;'>");
+            }
+            //печатаем таблицу
             html.AppendLine("<table>");
             html.AppendLine(" <tr><th>Параметр</th><th>Фаза A</th></tr>");
             html.AppendLine($"<tr><td>Средняя частота</td><td>{avgFreq:F6} Гц</td></tr>");
@@ -127,9 +149,24 @@ namespace WinFormsApp6
             double minVoltage = voltages.Min();
             double maxVoltage = voltages.Max();
             double DifferencePercent = ((AvgVoltage - nominalVoltage) / nominalVoltage) * 100;
-            //выведем среднеквадратичное отклонение напряжение на 10 минутах, сколько 10 минутных участков отклонение было больше 10%
+
 
             html.AppendLine("<h2>Анализ действующих значений напряжения</h2>");
+            //вставляем график Ua
+            if (!string.IsNullOrEmpty(_voltagePlotPath) && File.Exists(_voltagePlotPath))
+            {
+                html.AppendLine("<h3>Напряжение в фазе А</h3>");
+                string imgSrc = Path.GetFileName(_voltagePlotPath);
+                html.AppendLine($"<img src='{imgSrc}' alt='Осциллограмма' style='max-width:100%; height:auto; border:1px solid #ddd;'>");
+            }
+            //вставляем график отклонения напряжения 
+            if (!string.IsNullOrEmpty(_voltagePlotPath) && File.Exists(_voltagePlotPath))
+            {
+                html.AppendLine("<h3>Действующее значение напряжения в фазе А</h3>");
+                string imgSrc = Path.GetFileName(_rmsPlotPath);
+                html.AppendLine($"<img src='{imgSrc}' alt='dU' style='max-width:100%; height:auto; border:1px solid #ddd;'>");
+            }
+            //печатаем таблицу
             html.AppendLine("<table>");
             html.AppendLine(" <tr><th>Параметр</th><th>Фаза A</th></tr>");
             html.AppendLine($"<tr><td>Среднее значение</td><td>{AvgVoltage:F2} В</td></tr>");
@@ -157,8 +194,14 @@ namespace WinFormsApp6
 
             html.AppendLine(" <h2>Гармонический анализ</h2>");
 
+            if (!string.IsNullOrEmpty(_harmPlotPath) && File.Exists(_harmPlotPath))
+            {
+                html.AppendLine("<h3>Гармонический состав</h3>");
+                string imgSrc = Path.GetFileName(_harmPlotPath);
+                html.AppendLine($"<img src='{imgSrc}' alt='Гармоники' style='max-width:100%; height:auto; border:1px solid #ddd;'>");
+            }
 
-          
+
             // Таблица гармноник
             html.AppendLine("<table>");
             html.AppendLine("<tr><th>Гармоника</th><th>Амплитуда (Фаза A)</th><th>THD коэффициент</th></tr>");
@@ -171,7 +214,7 @@ namespace WinFormsApp6
         private void GeneratePowerQualityMetrics(StringBuilder html)
         {
             //html.AppendLine(" <h2>Соответствие полученных данных требованием ГОСТ</h2>");
-            //вывести итоговые значения и сравнить с труьебъъ==
+            //вывести итоговые значения и сравнить с требуемыми
         }
 
         public void OpenInBrowser()
@@ -187,7 +230,7 @@ namespace WinFormsApp6
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"не полуичилось отркрыть бразуеер{ex.Message}");
+                Console.WriteLine($"не получилось открыть браузер{ex.Message}");
             }
         }
     }
