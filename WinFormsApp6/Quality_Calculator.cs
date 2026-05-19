@@ -1,10 +1,13 @@
-﻿using System;
+﻿using ScottPlot;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 using VoltageAnalyzer;
+using static Plotly.NET.StyleParam;
 
 namespace WinFormsApp6
 {
@@ -18,11 +21,15 @@ namespace WinFormsApp6
 
         public double nominalU = 6000;
 
+       
+
+        public double[] GetTHDSy_Array() => THDSy_Array;
+
         private readonly ThreePhaseVoltageAnalyzer _voltageAnalyzer;
         private readonly FrequencyCalculator _frequencyCalculator;
         private readonly HarmnicsCalculator _harmnicsCalculator;
         private readonly RMS_Calculator _rMS_Calculator;
-
+        protected double[] THDSy_Array;
 
         public Quality_Calculator(ThreePhaseVoltageAnalyzer voltageAnalyzer,
                                     FrequencyCalculator frequencyCalculator,
@@ -36,7 +43,66 @@ namespace WinFormsApp6
             _harmnicsCalculator= harmnicsCalculator;
             _rMS_Calculator = rMS_Calculator;
         }
+        public double Calculate_Harmonics_THDSy()
+        {
+            int dataPoints = _harmnicsCalculator.PhaseAHarmonicsAmplitudes.Count; // Количество временных отсчетов по 10 периодов 
+            THDSy_Array = new double[dataPoints];
+           
+            for (int j = 0; j < dataPoints; j++)
+            {
+                double Ysg_1 = Math.Sqrt(_harmnicsCalculator.PhaseAHarmonicsAmplitudes[j][9] * _harmnicsCalculator.PhaseAHarmonicsAmplitudes[j][9] + _harmnicsCalculator.PhaseAHarmonicsAmplitudes[j][11] * _harmnicsCalculator.PhaseAHarmonicsAmplitudes[j][11] + _harmnicsCalculator.PhaseAHarmonicsAmplitudes[j][10] * _harmnicsCalculator.PhaseAHarmonicsAmplitudes[j][10]);
+                double YhY1 = 0;
+                for (int i = 2; i < 40; i++)
+                {
+                        double Ysg_h =Math.Sqrt(_harmnicsCalculator.PhaseAHarmonicsAmplitudes[j][i * 10 + 1] * _harmnicsCalculator.PhaseAHarmonicsAmplitudes[j][i * 10 + 1] + _harmnicsCalculator.PhaseAHarmonicsAmplitudes[j][i * 10] * _harmnicsCalculator.PhaseAHarmonicsAmplitudes[j][i * 10] + _harmnicsCalculator.PhaseAHarmonicsAmplitudes[j][i * 10 - 1] * _harmnicsCalculator.PhaseAHarmonicsAmplitudes[j][i * 10 - 1]);
+                       
+                        YhY1 = YhY1 + (Math.Pow(Ysg_h,2) / Math.Pow(Ysg_1, 2)); 
+
+                }
+                THDSy_Array[j] = Math.Sqrt(YhY1);
+                WriteCSV_THDSy(j, THDSy_Array[j]);
+
+            }
+            double THDSy_Sum = Math.Sqrt(THDSy_Array.Average(x => x * x));//все таки RMS
+            //double THDSy_Sum = THDSy_Array.Average(); //RMS или просто .Average?
+            //double THDSy_Sum = Math.Sqrt(THDSy_Array.Average(x => x * x));
+            return THDSy_Sum;
         
+        
+        }
+
+        private void WriteCSV_THDSy(int Count, double THDSy)
+        {
+            string csvFilePath = "outputTHDSy.csv";
+
+            try
+            {
+                bool fileExists = File.Exists(csvFilePath);
+                // Запись данных
+                using (StreamWriter sw = new StreamWriter(csvFilePath, true, Encoding.UTF8))
+                {
+
+                    if (!fileExists)
+                    {
+                        sw.WriteLine("Номер интервала 10 периодов; Значение THDSy на интервале 10 периодов");
+                        sw.WriteLine($"{Count }; {THDSy.ToString("F3", System.Globalization.CultureInfo.InvariantCulture)}");
+                    }
+                    else
+                    {
+                        sw.WriteLine($"{Count }; {THDSy.ToString("F3", System.Globalization.CultureInfo.InvariantCulture)}");
+                    }
+
+                }
+
+
+
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Ошибка при записи в файл: {ex.Message}");
+            }
+
+        }
 
         public double Calculate_Voltage_quality()
         {

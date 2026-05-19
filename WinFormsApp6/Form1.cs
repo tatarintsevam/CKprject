@@ -26,6 +26,7 @@ namespace WinFormsApp6
 
         private ThreePhaseVoltageAnalyzer voltageAnalyzer;
         private ThreePhaseVoltageAnalyzer voltageAnalyzerFreq;
+        private ThreePhaseVoltageAnalyzer voltageAnalyzerHarm;
         private Quality_Calculator quality_Calculator;
         private FrequencyCalculator frequencyCalculator;
         private HarmnicsCalculator harmnicsCalculator;
@@ -80,8 +81,9 @@ namespace WinFormsApp6
             {
 
                 voltageAnalyzer = new ThreePhaseVoltageAnalyzer(filePath, 10, 10);
+                voltageAnalyzerHarm = new ThreePhaseVoltageAnalyzer(filePath, 10, 10);
                 voltageAnalyzerFreq = new ThreePhaseVoltageAnalyzer(filePath, 500, 500);
-                harmnicsCalculator = new HarmnicsCalculator(voltageAnalyzer);
+                harmnicsCalculator = new HarmnicsCalculator(voltageAnalyzerHarm);
                 rMS_Calculator = new RMS_Calculator(voltageAnalyzer);
                 frequencyCalculator = new FrequencyCalculator(voltageAnalyzerFreq);
                 quality_Calculator = new Quality_Calculator(voltageAnalyzer,  frequencyCalculator, harmnicsCalculator, rMS_Calculator);
@@ -115,36 +117,38 @@ namespace WinFormsApp6
             harmPlot.Plot.Clear();
 
             // Подготавливаем для отображения средние за все время спектры по каждой из фаз
-            int harmPoints = harmnicsCalculator.PhaseAHarmonicsAmplitudes[0].Count; // Количество гармоник по фазе
-            int dataPoints = harmnicsCalculator.PhaseAHarmonicsAmplitudes.Count; // Количество временных отсчетов
+            int harmPoints = harmnicsCalculator.PhaseAHarmonicsAmplitudes[0].Count; // Количество гармоник по фазе т.е.40*10
+            int dataPoints = harmnicsCalculator.PhaseAHarmonicsAmplitudes.Count; // Количество временных отсчетов по 10 периодов 
 
             double[] harmonics = new double[harmPoints];
 
 
-            double[] phaseA = new double[harmPoints];
 
+            double[] Amplitudes_Avg = new double[harmPoints];
 
             // Для каждой гармоники вычисляем ее среднее значение на всем протяжении измерений
-            for (int i = 0; i < harmPoints; i++)
+            for (int i = 0; i < 40; i++)
             {
+                double[] Amplitudes = new double[harmPoints];
                 harmonics[i] = i + 1;
 
                 // Вычисление среднего значения
                 for (int j = 0; j < dataPoints; j++)
                 {
-                    phaseA[i] = phaseA[i] + harmnicsCalculator.PhaseAHarmonicsAmplitudes[j][i];
+                    Amplitudes[i] = Amplitudes[i] + harmnicsCalculator.PhaseAHarmonicsAmplitudes[j][(i+1)*10-1];
 
                 }
 
 
-                phaseA[i] = phaseA[i] / dataPoints;
+                Amplitudes_Avg[i] = Amplitudes[i] / dataPoints;
 
             }
 
-            var phA = harmPlot.Plot.Add.Bars(harmonics, phaseA);
+            var phA = harmPlot.Plot.Add.Bars(harmonics, Amplitudes_Avg);
             phA.LegendText = "Ua";
 
-        
+            harmPlot.Plot.Axes.SetLimitsX(0.5, 40.5); 
+
             harmPlot.Plot.Axes.AutoScale();
 
 
@@ -162,7 +166,7 @@ namespace WinFormsApp6
             //записываем результат в CSV
             for (int i = 0; i < harmonics.Length; i++)
             {
-                WriteCSV_Harm(harmonics[i], phaseA[i]);
+                WriteCSV_Harm(harmonics[i], Amplitudes_Avg[i]);
 
             }
 
@@ -563,7 +567,7 @@ namespace WinFormsApp6
                     catch (Exception ex)
                     {
                         MessageBox.Show($"не получилось создать отчет: {ex.Message}",
-                            "Ошбка", MessageBoxButtons.OK);
+                            "Ошибка", MessageBoxButtons.OK);
                     }
                 }
             }

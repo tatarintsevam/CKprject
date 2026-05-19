@@ -34,8 +34,8 @@ namespace WinFormsApp6
             _voltageAnalyzer = voltageAnalyzer;
             _frequencyCalculator = frequencyCalculator; 
             _outputPath = outputPath;
-            _quality_Calculator = quality_Calculator;
             _harmnicsCalculator = harmnicsCalculator;
+            _quality_Calculator = quality_Calculator;
             _rMS_Calculator = rMS_Calculator;
             _plotPaths = plotPaths;
             _frequencyPlotPath = plotPaths["frequency"];
@@ -200,13 +200,14 @@ namespace WinFormsApp6
                 string imgSrc = Path.GetFileName(_harmPlotPath);
                 html.AppendLine($"<img src='{imgSrc}' alt='Гармоники' style='max-width:100%; height:auto; border:1px solid #ddd;'>");
             }
+            html.AppendLine($" <p> Коэффициент THDSy:  {_quality_Calculator.Calculate_Harmonics_THDSy()*100:F2} %</p>");
+            //for (int i = 0; i < 35; i++)
+            //{
+            //    double[] array = _quality_Calculator.GetTHDSy_Array();
 
+            //    html.AppendLine($"<tr><td>{i + 2}</td><td>{"-надо добавить"}</td><td>{_quality_Calculator.Calculate_Harmonics_THDSy()}</td></tr>");
 
-            // Таблица гармноник
-            html.AppendLine("<table>");
-            html.AppendLine("<tr><th>Гармоника</th><th>Амплитуда (Фаза A)</th><th>THD коэффициент</th></tr>");
-
-
+            //}
 
 
         }

@@ -39,7 +39,6 @@ namespace WinFormsApp6
 
             // Получение частоты дискретизации
             int samplingRate = (int)_voltageAnalyzer.GetConfiguration().SampleRates[0].SamplingFrequency;
-            double durationSeconds = _voltageAnalyzer.GetPhaseAData().Count / samplingRate;
             // Расчет размера окна и шага в точках
             int windowSizePoints = (int)(samplingRate * _voltageAnalyzer.GetWindowSizePeriods() / _voltageAnalyzer.GetNominalFrequency());
             int stepSizePoints = (int)(samplingRate * _voltageAnalyzer.GetStepSizePeriods() / _voltageAnalyzer.GetNominalFrequency());
@@ -76,7 +75,7 @@ namespace WinFormsApp6
             try
             {
                 bool fileExists = File.Exists(csvFilePath);
-
+                // Запись данных
                 using (StreamWriter sw = new StreamWriter(csvFilePath, true, Encoding.UTF8))
                 {
 
@@ -86,7 +85,7 @@ namespace WinFormsApp6
                         sw.WriteLine($"{timeStamp: HH:mm:ss}; {RMS.ToString("F3", System.Globalization.CultureInfo.InvariantCulture)}");
                     }
                     else
-                    {   // Запись данных
+                    {   
                         sw.WriteLine($"{timeStamp: HH:mm:ss}; {RMS.ToString("F3", System.Globalization.CultureInfo.InvariantCulture)}");
                     }
 

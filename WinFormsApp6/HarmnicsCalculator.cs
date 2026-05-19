@@ -29,14 +29,15 @@ namespace WinFormsApp6
    int samplingRate)
         {
             Complex[] dft = PerformFFT(data);
-            //var dft = data.Select(x => new Complex(x, 0)).ToArray(); Fourier.Forward(dft, FourierOptions.Default);
+            //var dft = data.Select(x => new Complex(x, 0)).ToArray();
+            //Fourier.Forward(dft, FourierOptions.Default);
             List<double> amplitudes = new List<double>();
             List<double> phases = new List<double>();
-            // Рассчитываем до 50-й гармоники
-            int maxHarmonic = (int)(samplingRate / (2 * _voltageAnalyzer.GetNominalFrequency()));
+            int maxHarmonic = (int)(samplingRate*20 / (2 * _voltageAnalyzer.GetNominalFrequency()));// Максимально 400 бинов
             for (int i = 1; i <= maxHarmonic; i++)
             {
-                int index = (int)(i * _voltageAnalyzer.GetNominalFrequency() * data.Length / samplingRate);
+                //int index = (int)(i * _voltageAnalyzer.GetNominalFrequency() * data.Length / samplingRate);
+                int index = (int)(i * _voltageAnalyzer.GetNominalFrequency() * data.Length /(10 * samplingRate));
                 if (index >= dft.Length) break;
 
                 amplitudes.Add((Math.Sqrt(dft[index].Real * dft[index].Real +
@@ -47,37 +48,7 @@ namespace WinFormsApp6
 
             return (amplitudes, phases);
         }
-        private void WriteCSV(double Amplitude, double phase)
-        {
-            string csvFilePath = "outputHarm.csv";
-            HarmNum++;
-            try
-            {
-                bool fileExists = File.Exists(csvFilePath);
-
-                using (StreamWriter sw = new StreamWriter(csvFilePath, true, Encoding.UTF8))
-                {
-
-                    if (!fileExists)
-                    {
-                        sw.WriteLine("Номер гармоники; Амплитуда; фаза");
-                    }
-                    else
-                    {   // Запись данных
-                        sw.WriteLine($"{HarmNum};{Amplitude}; {phase.ToString("F3", System.Globalization.CultureInfo.InvariantCulture)}");
-                    }
-
-                }
-
-
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"Ошибка при записи в файл: {ex.Message}");
-            }
-
-        }
-
+       
         protected void CalculateHarmonics()
         {
             TimeStampsHarmonics.Clear();
